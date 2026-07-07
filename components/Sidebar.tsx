@@ -89,7 +89,7 @@ export const getRoleAllowedTabs = (role: string): string[] => {
     case "store manager":
       return ["1", "2", "4", "5"];
     case "vendor manager":
-      return ["2", "3"];
+      return ["1", "2", "3", "4", "5"];
     case "regional head":
       return ["1", "2", "3", "4", "5"];
     case "retail head":
@@ -134,7 +134,7 @@ export default function Sidebar({
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200/80 flex flex-col justify-between h-screen transition-transform duration-300 transform lg:translate-x-0 lg:static sticky top-0`}
+      className={`fixed inset-y-0 left-0 z-50 w-64 shrink-0 bg-white border-r border-slate-200/80 flex flex-col justify-between h-screen transition-transform duration-300 transform lg:translate-x-0 lg:static sticky top-0`}
       style={{ transform: isOpen ? "translateX(0)" : undefined }}
     >
       <div className="flex flex-col overflow-hidden h-[calc(100vh-88px)]">
@@ -175,9 +175,9 @@ export default function Sidebar({
                       setActiveTab(item.id);
                       onClose();
                     }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition duration-150 font-semibold text-sm text-left border-2 ${
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition duration-150 font-semibold text-sm text-left border-2 outline-none focus-visible:ring-2 focus-visible:ring-bp-green/50 ${
                       isSelected
-                        ? "bg-bp-green/5 border-bp-green text-slate-955 shadow-sm"
+                        ? "bg-bp-green/5 border-bp-green text-slate-900 shadow-sm"
                         : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50"
                     }`}
                   >
@@ -209,9 +209,9 @@ export default function Sidebar({
                       setActiveTab(item.id);
                       onClose();
                     }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition duration-150 font-semibold text-sm text-left border-2 ${
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition duration-150 font-semibold text-sm text-left border-2 outline-none focus-visible:ring-2 focus-visible:ring-bp-green/50 ${
                       isSelected
-                        ? "bg-bp-green/5 border-bp-green text-slate-955 shadow-sm"
+                        ? "bg-bp-green/5 border-bp-green text-slate-900 shadow-sm"
                         : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50"
                     }`}
                   >

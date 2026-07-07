@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import Sidebar, { sidebarItems, getRoleAllowedTabs } from "@/components/Sidebar";
 import DashboardOverview from "@/components/DashboardOverview";
+import VendorDashboardOverview from "@/components/VendorDashboardOverview";
 import TabPlaceholder from "@/components/TabPlaceholder";
 
 // High-fidelity dashboards
@@ -184,7 +185,11 @@ export default function Home() {
         <div className="p-6 lg:p-8 flex-grow">
           {activeTab === "1" ? (
             /* Tab 1: Executive Overview */
-            <DashboardOverview onNavigate={handleCrossNavigate} />
+            user.role === "vendor manager" ? (
+              <VendorDashboardOverview onNavigate={handleCrossNavigate} />
+            ) : (
+              <DashboardOverview onNavigate={handleCrossNavigate} />
+            )
           ) : activeTab === "2" ? (
             /* Tab 2: Predictive Stockout Dashboards */
             <div className="space-y-6">

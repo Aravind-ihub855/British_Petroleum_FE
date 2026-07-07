@@ -1,11 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
-import {
-  getVendorPerformanceMetrics,
-  getVendorsForProduct,
-  getProductsForVendor
-} from "@/utils/mockDb";
+import { calculateVendorPerformanceMetrics, getVendorsForProductDB, getProductsForVendorDB } from "@/utils/dbCalculations";
 import { useData } from "@/context/DataContext";
 
 interface VendorPerformanceProps {
@@ -51,11 +47,11 @@ export default function VendorPerformance({
   }
 
   // Tab 1 overview metrics
-  const performanceLogs = getVendorPerformanceMetrics();
+  const performanceLogs = calculateVendorPerformanceMetrics(vendors, masterProducts);
 
   // Tab 2 Vendor-wise details
   const activeVendor = vendors.find((v) => v.name === selectedVendorName) || vendors[0];
-  const vendorProducts = activeVendor ? getProductsForVendor(activeVendor.id) : [];
+  const vendorProducts = activeVendor ? getProductsForVendorDB(masterProducts, activeVendor.id) : [];
 
   // Aggregate stats for Vendor Analysis Tab 2
   const vendorOverallScore = vendorProducts.length > 0
@@ -77,7 +73,7 @@ export default function VendorPerformance({
 
   // Tab 3 Product-wise details
   const activeProduct = masterProducts.find((p) => p.code === selectedProductCode) || masterProducts[0];
-  const productVendors = activeProduct ? getVendorsForProduct(activeProduct.code) : [];
+  const productVendors = activeProduct ? getVendorsForProductDB(vendors, activeProduct.code) : [];
 
   // Dynamic alerts
   const vendorCount = productVendors.length;
@@ -156,9 +152,9 @@ export default function VendorPerformance({
             </div>
           </div> */}
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="grid grid-cols-1 gap-8">
             {/* Overview Table */}
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-xs overflow-hidden text-left lg:col-span-7">
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-xs overflow-hidden text-left w-full">
               <div className="p-6 border-b border-slate-50">
                 <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
                   Vendor Capability Metrics
@@ -204,67 +200,6 @@ export default function VendorPerformance({
                     ))}
                   </tbody>
                 </table>
-              </div>
-            </div>
-
-            {/* Right side alerts with enhanced margin */}
-            <div className="space-y-6 lg:col-span-5 text-left">
-              {/* Dependency Alerts */}
-              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-4">
-                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider border-b border-slate-50 pb-2">
-                  Single-Vendor Risk Alerts
-                </h3>
-                <div className="p-4 bg-rose-50 border border-rose-100 rounded-xl flex items-start gap-3">
-                  <svg className="w-5 h-5 text-rose-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                  <div>
-                    <h4 className="text-xs font-bold text-rose-800">Castrol GTX 5W30 dependency</h4>
-                    <p className="text-[11px] text-rose-600 mt-1.5 leading-relaxed">
-                      Dependent solely on Castrol USA Lubricants. Recommend onboarding Valvoline or Mobil 1 backup lines.
-                    </p>
-                  </div>
-                </div>
-                <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl flex items-start gap-3">
-                  <svg className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                  <div>
-                    <h4 className="text-xs font-bold text-amber-800">Whole Milk dependency</h4>
-                    <p className="text-[11px] text-amber-600 mt-1.5 leading-relaxed">
-                      Single-vendor onboarded for Chicago limits. Onboarding McLane Company planned for Q3.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Pricing Opportunities */}
-              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-4">
-                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider border-b border-slate-50 pb-2">
-                  Procurement &amp; Savings Opportunities
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between text-xs">
-                    <div>
-                      <h4 className="font-semibold text-slate-800">Coca-Cola 20oz Bottle</h4>
-                      <span className="text-[10px] text-slate-400 mt-0.5 block">Current Market Price: $2.49 / Unit</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="font-bold text-bp-green block">$0.20 / Unit Savings</span>
-                      <p className="text-[9px] text-slate-400 mt-0.5">Coca-Cola Bottling rates match target</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <div>
-                      <h4 className="font-semibold text-slate-800">Castrol GTX 5W30</h4>
-                      <span className="text-[10px] text-slate-400 mt-0.5 block">Current Market Price: $10.99 / Ltr</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="font-bold text-bp-green block">$1.00 / Ltr Savings</span>
-                      <p className="text-[9px] text-slate-400 mt-0.5">Castrol USA volume contract ready</p>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
