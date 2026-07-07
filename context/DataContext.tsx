@@ -70,7 +70,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       const inventoryData = inventoryRes.ok ? await inventoryRes.json() : [];
 
       setStores(storesData);
-      setMasterProducts(productsData);
+      
+      let finalProducts = productsData;
+      if (user?.role === "store manager" && user?.storeId) {
+        const managerStore = storesData.find((s: any) => s.id === user.storeId);
+        if (managerStore && managerStore.products) {
+          finalProducts = productsData.filter((p: any) => managerStore.products[p.code]);
+        }
+      }
+      setMasterProducts(finalProducts);
       setVendors(vendorsData);
       setAllInventory(inventoryData);
     } catch (err) {

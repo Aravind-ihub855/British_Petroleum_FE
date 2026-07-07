@@ -8,6 +8,7 @@ export interface Store {
   address: string;
   contact: string;
   activeSince: string;
+  products?: Record<string, boolean>;
 }
 
 export interface Vendor {

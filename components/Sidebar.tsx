@@ -134,7 +134,7 @@ export default function Sidebar({
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200/80 flex flex-col justify-between h-screen transition-transform duration-300 transform lg:translate-x-0 lg:static sticky top-0`}
+      className={`fixed inset-y-0 left-0 z-50 w-64 min-w-[256px] bg-white border-r border-slate-200/80 flex flex-col justify-between h-screen transition-transform duration-300 transform lg:translate-x-0 lg:static lg:flex-shrink-0 sticky top-0`}
       style={{ transform: isOpen ? "translateX(0)" : undefined }}
     >
       <div className="flex flex-col overflow-hidden h-[calc(100vh-88px)]">
@@ -227,6 +227,29 @@ export default function Sidebar({
             </>
           )}
         </nav>
+
+        {/* Store Information Box (only for Store Manager) */}
+        {user.role === "store manager" && user.storeId && (
+          <div className="mx-4 my-3 p-4 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-left">
+            <h3 className="text-bp-green font-bold mb-3 uppercase tracking-wider text-[9px]">Store Information</h3>
+            <div className="space-y-2.5">
+              <div className="flex justify-between">
+                <span className="text-slate-400 font-medium">Location</span>
+                <span className="text-slate-700 font-bold">North America</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400 font-medium">City</span>
+                <span className="text-slate-700 font-bold">{stores.find(s => s.id === user.storeId)?.city || "Chicago"}</span>
+              </div>
+              <div className="flex justify-between gap-2 overflow-hidden">
+                <span className="text-slate-400 font-medium whitespace-nowrap">Store</span>
+                <span className="text-slate-700 font-bold truncate" title={storeName}>
+                  BP ({storeName || user.storeId})
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* User profile footer block: locked to the very bottom */}

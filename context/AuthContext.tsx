@@ -8,6 +8,8 @@ interface User {
   name: string;
   email: string;
   role: string;
+  storeId?: string;
+  region?: string;
   created_at: string;
 }
 
