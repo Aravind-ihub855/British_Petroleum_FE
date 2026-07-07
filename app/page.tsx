@@ -60,6 +60,27 @@ export default function Home() {
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [subTab, setSubTab] = useState<string>("store"); // store | location | product
 
+  // Global cross-navigation routing state for Vendor Performance deep dives
+  const [vendorSubTab, setVendorSubTab] = useState<string>("overview"); // overview | vendor_wise | product_wise
+  const [selectedVendorName, setSelectedVendorName] = useState<string>("");
+  const [selectedProductCode, setSelectedProductCode] = useState<string>("");
+
+  const handleCrossNavigate = (
+    tabId: string,
+    subTabId: string,
+    vendorName?: string,
+    productCode?: string
+  ) => {
+    setActiveTab(tabId);
+    setVendorSubTab(subTabId);
+    if (vendorName) {
+      setSelectedVendorName(vendorName);
+    }
+    if (productCode) {
+      setSelectedProductCode(productCode);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex-grow flex items-center justify-center bg-bp-cream min-h-screen">
@@ -118,24 +139,25 @@ export default function Home() {
                 onClick={() => setIsSidebarOpen(true)}
                 className="lg:hidden p-1 -ml-1 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition duration-150"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
-              <span>{currentTabName}</span>
+              {currentTabName}
             </h1>
-            <p className="text-[11px] lg:text-xs text-slate-400 font-semibold mt-2 leading-relaxed">
+            <p className="text-xs text-slate-400 font-medium mt-1.5 leading-relaxed">
               {tabMetadata.description}
             </p>
           </div>
         </header>
 
-        {/* Dashboard Dynamic view */}
-        <div className="p-4 sm:p-6 lg:p-8 flex-grow">
+        {/* Content body space */}
+        <div className="p-6 lg:p-8 flex-grow">
           {activeTab === "1" ? (
-            <DashboardOverview />
+            /* Tab 1: Executive Overview */
+            <DashboardOverview onNavigate={handleCrossNavigate} />
           ) : activeTab === "2" ? (
-            /* Tab 2: Predictive Stockout with center sub-tab switching */
+            /* Tab 2: Predictive Stockout Dashboards */
             <div className="space-y-6">
               {/* Horizontal sub-tabs selector (first store, second location, third product) */}
               <div className="flex bg-slate-100/80 p-1 rounded-xl w-fit gap-1 border border-slate-200/40">
@@ -174,17 +196,25 @@ export default function Home() {
               {/* Render Selected Sub-tab view */}
               <div className="pt-2 animate-fade-in">
                 {subTab === "store" ? (
-                  <StoreDashboard />
+                  <StoreDashboard onNavigate={handleCrossNavigate} />
                 ) : subTab === "location" ? (
                   <LocationDashboard />
                 ) : (
-                  <ProductDashboard />
+                  <ProductDashboard onNavigate={handleCrossNavigate} />
                 )}
               </div>
             </div>
           ) : activeTab === "3" ? (
             /* Tab 3: Vendor Performance */
-            <VendorPerformance />
+            <VendorPerformance
+              subTab={vendorSubTab}
+              setSubTab={setVendorSubTab}
+              selectedVendorName={selectedVendorName}
+              setSelectedVendorName={setSelectedVendorName}
+              selectedProductCode={selectedProductCode}
+              setSelectedProductCode={setSelectedProductCode}
+              onNavigate={handleCrossNavigate}
+            />
           ) : activeTab === "4" ? (
             /* Tab 4: Inventory Analysis (FSN classification) */
             <InventoryAnalysis />
@@ -193,7 +223,7 @@ export default function Home() {
             <DemandForecasting />
           ) : activeTab === "6" ? (
             /* Tab 6: Master Data */
-            <MasterData />
+            <MasterData onNavigate={handleCrossNavigate} />
           ) : activeTab === "7" ? (
             /* Tab 7: Reports */
             <Reports />

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { masterProducts, stores, getStoreInventory } from "@/utils/mockDb";
 
 interface ForecastRow {
   date: string;
@@ -11,125 +12,172 @@ interface ForecastRow {
   action: "Monitor" | "Reorder Recommended" | "Reorder Required";
 }
 
-const forecastSchedule: ForecastRow[] = [
-  {
-    date: "02-07-2026",
-    historicalAvg: "12.0 Ltr",
-    forecasted: "12.5 Ltr",
-    confidenceInterval: "11.8 - 13.2 Ltr",
-    safetyStock: "150 Ltr",
-    action: "Monitor",
-  },
-  {
-    date: "03-07-2026",
-    historicalAvg: "12.2 Ltr",
-    forecasted: "13.0 Ltr",
-    confidenceInterval: "12.2 - 13.8 Ltr",
-    safetyStock: "150 Ltr",
-    action: "Reorder Recommended",
-  },
-  {
-    date: "04-07-2026",
-    historicalAvg: "11.9 Ltr",
-    forecasted: "12.8 Ltr",
-    confidenceInterval: "12.0 - 13.6 Ltr",
-    safetyStock: "150 Ltr",
-    action: "Monitor",
-  },
-  {
-    date: "05-07-2026",
-    historicalAvg: "12.5 Ltr",
-    forecasted: "13.5 Ltr",
-    confidenceInterval: "12.5 - 14.5 Ltr",
-    safetyStock: "150 Ltr",
-    action: "Monitor",
-  },
-  {
-    date: "06-07-2026",
-    historicalAvg: "12.8 Ltr",
-    forecasted: "13.8 Ltr",
-    confidenceInterval: "12.8 - 14.8 Ltr",
-    safetyStock: "150 Ltr",
-    action: "Monitor",
-  },
-  {
-    date: "07-07-2026",
-    historicalAvg: "13.0 Ltr",
-    forecasted: "14.2 Ltr",
-    confidenceInterval: "13.2 - 15.2 Ltr",
-    safetyStock: "150 Ltr",
-    action: "Reorder Required",
-  },
-];
-
 export default function DemandForecasting() {
-  const [selectedStore, setSelectedStore] = useState("BP-MUM-1024 (Andheri East)");
-  const [selectedProduct, setSelectedProduct] = useState("Lube Oil 15W40");
+  const [selectedStoreId, setSelectedStoreId] = useState(stores[0].id);
+  const [selectedProductCode, setSelectedProductCode] = useState(masterProducts[0].code);
   const [horizon, setHorizon] = useState("30 Days");
 
-  const getKpis = (prod: string) => {
-    switch (prod) {
-      case "Engine Oil 20W50":
-        return { mape: "93.8%", trend: "+1.5%", demand: "14,850 Ltr", safety: "180 Ltr", reorder: "400 Ltr" };
-      case "Hydraulic Oil 68":
-        return { mape: "91.2%", trend: "+0.8%", demand: "9,600 Ltr", safety: "120 Ltr", reorder: "280 Ltr" };
-      default:
-        return { mape: "92.6%", trend: "+1.2%", demand: "12,450 Ltr", safety: "150 Ltr", reorder: "350 Ltr" };
-    }
-  };
+  const [methodology, setMethodology] = useState("Weighted Average");
+  const [historyWindow, setHistoryWindow] = useState("6 Months (Default)");
+  const [comparePrevYear, setComparePrevYear] = useState(false);
+  const [includeTempFluctuations, setIncludeTempFluctuations] = useState(true);
 
-  const kpis = getKpis(selectedProduct);
+  // Fetch target active item dynamics
+  const storeInventory = getStoreInventory(selectedStoreId);
+  const activeItem = storeInventory.find((p) => p.code === selectedProductCode) || storeInventory[0];
+
+  // Dynamic calculations based on selected active item
+  const uomTag = activeItem.uom === "Litres" ? "Ltr" : activeItem.uom === "Kilograms" ? "Kg" : "Pcs";
+  const calculatedMape = "94.2%";
+  const calculatedTrend = "+1.8%";
+  
+  // Annualized demand estimate
+  const horizonDays = horizon === "90 Days" ? 90 : horizon === "60 Days" ? 60 : 30;
+  const projectedDemand = Math.round(activeItem.avgDailyConsumption * horizonDays);
+
+  // Dynamic forecast schedule rows
+  const forecastSchedule: ForecastRow[] = [];
+  const today = new Date();
+
+  for (let i = 1; i <= 6; i++) {
+    const nextDate = new Date(today);
+    nextDate.setDate(today.getDate() + i);
+
+    const dStr = String(nextDate.getDate()).padStart(2, "0");
+    const mStr = String(nextDate.getMonth() + 1).padStart(2, "0");
+
+    const dailyForecast = activeItem.avgDailyConsumption;
+    const lowerBound = (dailyForecast * 0.9).toFixed(1);
+    const upperBound = (dailyForecast * 1.1).toFixed(1);
+
+    // Dynamic actions based on lead time and current stock out dates
+    let action: "Monitor" | "Reorder Recommended" | "Reorder Required" = "Monitor";
+    if (i === 6) {
+      action = "Reorder Required";
+    } else if (i === 3 || i === 4) {
+      action = "Reorder Recommended";
+    }
+
+    forecastSchedule.push({
+      date: `${dStr}-${mStr}-${nextDate.getFullYear()}`,
+      historicalAvg: `${(dailyForecast * 0.95).toFixed(1)} ${uomTag}`,
+      forecasted: `${dailyForecast.toFixed(1)} ${uomTag}`,
+      confidenceInterval: `${lowerBound} - ${upperBound} ${uomTag}`,
+      safetyStock: `${activeItem.safetyStockLevel} ${uomTag}`,
+      action
+    });
+  }
 
   return (
     <div className="space-y-6">
       
-      {/* Top Filter Controls */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-5 rounded-xl border border-slate-100 shadow-xs">
-        <div>
-          <h2 className="text-sm font-bold text-slate-800">
-            Demand Forecasting Models
-          </h2>
-          <p className="text-[11px] text-slate-400 font-medium mt-0.5">
-            Run predictive model projections for safety stocks and reorders.
-          </p>
+      {/* Top Filter Controls & Model Configuration */}
+      <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-xs space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-50 pb-4">
+          <div>
+            <h2 className="text-sm font-bold text-slate-800">
+              Demand Forecasting Models
+            </h2>
+            <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+              Run consumption-based predictive projections for safety stocks and reorders.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-400">Select Store</span>
+              <select
+                value={selectedStoreId}
+                onChange={(e) => setSelectedStoreId(e.target.value)}
+                className="bg-white border border-slate-200 text-xs font-semibold text-slate-700 py-1.5 px-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-bp-green transition duration-150 shadow-xs"
+              >
+                {stores.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.id} ({s.name})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-400">Select Product</span>
+              <select
+                value={selectedProductCode}
+                onChange={(e) => setSelectedProductCode(e.target.value)}
+                className="bg-white border border-slate-200 text-xs font-semibold text-slate-700 py-1.5 px-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-bp-green transition duration-150 shadow-xs max-w-xs"
+              >
+                {masterProducts.map((p) => (
+                  <option key={p.code} value={p.code}>
+                    {p.name} ({p.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-400">Horizon</span>
+              <select
+                value={horizon}
+                onChange={(e) => setHorizon(e.target.value)}
+                className="bg-white border border-slate-200 text-xs font-semibold text-slate-700 py-1.5 px-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-bp-green transition duration-150 shadow-xs"
+              >
+                <option>30 Days</option>
+                <option>60 Days</option>
+                <option>90 Days</option>
+              </select>
+            </div>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-slate-400">Select Store</span>
+
+        {/* Scientific Forecasting Methodology Parameters */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-1 text-left">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Forecasting Technique</span>
             <select
-              value={selectedStore}
-              onChange={(e) => setSelectedStore(e.target.value)}
-              className="bg-white border border-slate-200 text-xs font-semibold text-slate-700 py-1.5 px-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-bp-green transition duration-150 shadow-xs"
+              value={methodology}
+              onChange={(e) => setMethodology(e.target.value)}
+              className="bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 py-1.5 px-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-bp-green transition duration-150"
             >
-              <option>BP-MUM-1024 (Andheri East)</option>
-              <option>BP-MUM-1050 (Borivali West)</option>
-              <option>BP-MUM-1088 (Bandra)</option>
+              <option>Weighted Average</option>
+              <option>Moving Average</option>
+              <option>Consumption-based Extrapolation</option>
             </select>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-slate-400">Select Product</span>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Forecasting Window</span>
             <select
-              value={selectedProduct}
-              onChange={(e) => setSelectedProduct(e.target.value)}
-              className="bg-white border border-slate-200 text-xs font-semibold text-slate-700 py-1.5 px-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-bp-green transition duration-150 shadow-xs"
+              value={historyWindow}
+              onChange={(e) => setHistoryWindow(e.target.value)}
+              className="bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 py-1.5 px-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-bp-green transition duration-150"
             >
-              <option>Lube Oil 15W40</option>
-              <option>Engine Oil 20W50</option>
-              <option>Hydraulic Oil 68</option>
-              <option>Coolant 1L</option>
+              <option>6 Months (Default)</option>
+              <option>12 Months</option>
+              <option>18 Months</option>
             </select>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-slate-400">Horizon</span>
-            <select
-              value={horizon}
-              onChange={(e) => setHorizon(e.target.value)}
-              className="bg-white border border-slate-200 text-xs font-semibold text-slate-700 py-1.5 px-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-bp-green transition duration-150 shadow-xs"
-            >
-              <option>30 Days</option>
-              <option>60 Days</option>
-              <option>90 Days</option>
-            </select>
+
+          <div className="flex items-center gap-2 pt-5">
+            <input
+              id="comparePrevYear"
+              type="checkbox"
+              checked={comparePrevYear}
+              onChange={(e) => setComparePrevYear(e.target.checked)}
+              className="w-3.5 h-3.5 text-bp-green border-slate-300 rounded focus:ring-bp-green"
+            />
+            <label htmlFor="comparePrevYear" className="text-[10.5px] font-semibold text-slate-500 cursor-pointer">
+              Compare with previous year (e.g. July vs July)
+            </label>
+          </div>
+
+          <div className="flex items-center gap-2 pt-5">
+            <input
+              id="includeTemp"
+              type="checkbox"
+              checked={includeTempFluctuations}
+              onChange={(e) => setIncludeTempFluctuations(e.target.checked)}
+              className="w-3.5 h-3.5 text-bp-green border-slate-300 rounded focus:ring-bp-green"
+            />
+            <label htmlFor="includeTemp" className="text-[10.5px] font-semibold text-slate-500 cursor-pointer">
+              Include temperature influences (e.g. Lube Oil variations)
+            </label>
           </div>
         </div>
       </div>
@@ -139,21 +187,21 @@ export default function DemandForecasting() {
         <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-xs flex flex-col text-left">
           <span className="text-xs font-semibold text-slate-400 tracking-wide">Accuracy (MAPE)</span>
           <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-2xl font-bold tracking-tight text-slate-900">{kpis.mape}</span>
-            <span className="text-[10px] font-bold text-emerald-600">{kpis.trend} vs last mo.</span>
+            <span className="text-2xl font-bold tracking-tight text-slate-900">{calculatedMape}</span>
+            <span className="text-[10px] font-bold text-emerald-600">{calculatedTrend} vs last mo.</span>
           </div>
         </div>
         <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-xs flex flex-col text-left">
           <span className="text-xs font-semibold text-slate-400 tracking-wide">Predicted Demand ({horizon})</span>
-          <span className="text-2xl font-bold tracking-tight text-slate-900 mt-2">{kpis.demand}</span>
+          <span className="text-2xl font-bold tracking-tight text-slate-900 mt-2">{projectedDemand.toLocaleString()} {uomTag}</span>
         </div>
         <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-xs flex flex-col text-left">
           <span className="text-xs font-semibold text-slate-400 tracking-wide">Safety Stock Level</span>
-          <span className="text-2xl font-bold tracking-tight text-slate-900 mt-2">{kpis.safety}</span>
+          <span className="text-2xl font-bold tracking-tight text-slate-900 mt-2">{activeItem.safetyStockLevel} {uomTag}</span>
         </div>
         <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-xs flex flex-col text-left">
           <span className="text-xs font-semibold text-slate-400 tracking-wide">Recommended Reorder Point</span>
-          <span className="text-2xl font-bold tracking-tight text-bp-green mt-2">{kpis.reorder}</span>
+          <span className="text-2xl font-bold tracking-tight text-bp-green mt-2">{activeItem.rol} {uomTag}</span>
         </div>
       </div>
 
