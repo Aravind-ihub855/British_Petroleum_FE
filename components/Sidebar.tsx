@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useData } from "@/context/DataContext";
 
 export interface SidebarItem {
   id: string;
@@ -86,7 +87,7 @@ export const sidebarItems: SidebarItem[] = [
 export const getRoleAllowedTabs = (role: string): string[] => {
   switch (role?.toLowerCase()) {
     case "store manager":
-      return ["2"];
+      return ["1", "2", "4", "5"];
     case "vendor manager":
       return ["2", "3"];
     case "regional head":
@@ -107,6 +108,8 @@ interface SidebarProps {
     name: string;
     email: string;
     role: string;
+    storeId?: string;
+    region?: string;
   };
   logout: () => void;
   isOpen: boolean;
@@ -121,6 +124,8 @@ export default function Sidebar({
   isOpen,
   onClose,
 }: SidebarProps) {
+  const { stores } = useData();
+  const storeName = stores.find((s) => s.id === user.storeId)?.name || "";
   const allowedTabIds = getRoleAllowedTabs(user.role);
   const allowedItems = sidebarItems.filter((item) => allowedTabIds.includes(item.id));
   
@@ -132,7 +137,7 @@ export default function Sidebar({
       className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200/80 flex flex-col justify-between h-screen transition-transform duration-300 transform lg:translate-x-0 lg:static sticky top-0`}
       style={{ transform: isOpen ? "translateX(0)" : undefined }}
     >
-      <div className="flex flex-col overflow-hidden h-[calc(100vh-76px)]">
+      <div className="flex flex-col overflow-hidden h-[calc(100vh-88px)]">
         {/* Logo Brand Header */}
         <div className="p-6 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-2.5">
@@ -225,7 +230,7 @@ export default function Sidebar({
       </div>
 
       {/* User profile footer block: locked to the very bottom */}
-      <div className="p-4 border-t border-slate-100 bg-white flex-shrink-0 h-[76px] flex items-center justify-between">
+      <div className="p-4 border-t border-slate-100 bg-white flex-shrink-0 h-[88px] flex items-center justify-between">
         <div className="flex items-center gap-3 overflow-hidden">
           {/* Colorful/BP styled round avatar */}
           <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#008751] to-emerald-500 flex items-center justify-center font-bold text-xs text-white flex-shrink-0 shadow-sm">
@@ -233,7 +238,12 @@ export default function Sidebar({
           </div>
           <div className="flex flex-col text-left overflow-hidden">
             <span className="text-xs font-bold text-slate-800 truncate leading-none">{user.name}</span>
-            <span className="text-[10px] text-slate-400 font-semibold truncate mt-1.5">{user.role || "User"}</span>
+            <span className="text-[10px] text-slate-400 font-semibold truncate mt-1">{user.role || "User"}</span>
+            {user.role === "store manager" && user.storeId && (
+              <span className="text-[9px] text-bp-green font-bold truncate mt-0.5" title={`${storeName} (${user.storeId})`}>
+                {storeName || "Store"}: {user.storeId}
+              </span>
+            )}
           </div>
         </div>
         
