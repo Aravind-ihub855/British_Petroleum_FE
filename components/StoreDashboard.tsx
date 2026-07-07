@@ -114,6 +114,16 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
                     ? "text-amber-600 bg-amber-50/70 border-amber-100"
                     : "text-emerald-600 bg-emerald-50/70 border-emerald-100";
 
+                const isOverdue = (() => {
+                  const parts = row.orderByDate.split("-");
+                  if (parts.length === 3) {
+                    const orderDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                    const currentDate = new Date(2026, 6, 7); // 07-07-2026 mock planning date
+                    return orderDate < currentDate;
+                  }
+                  return false;
+                })();
+
                 return (
                   <tr key={idx} className="hover:bg-slate-50/40 transition duration-75">
                     <td className="py-3.5 px-5 font-semibold text-bp-green cursor-pointer hover:underline"
@@ -126,7 +136,12 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
                     <td className="py-3.5 px-4 text-right font-normal text-slate-500">{row.avgDailyConsumption}</td>
                     <td className="py-3.5 px-4 text-center font-medium text-slate-800">{row.predictedStockoutDate}</td>
                     <td className="py-3.5 px-4 text-right font-semibold text-bp-green">{row.recommendedRoq}</td>
-                    <td className="py-3.5 px-4 text-center font-medium text-slate-800">{row.orderByDate}</td>
+                    <td className={`py-3.5 px-4 text-center font-semibold ${isOverdue ? "text-rose-600" : "text-slate-800"}`}>
+                      <span>{row.orderByDate}</span>
+                      {isOverdue && (
+                        <span className="text-[9px] bg-rose-50 text-rose-600 px-1.5 py-0.5 rounded border border-rose-100 font-bold ml-1 uppercase tracking-wider inline-block">Overdue</span>
+                      )}
+                    </td>
                     <td className="py-3.5 px-4 text-center">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
                         row.prMrStatus === "PR" ? "bg-rose-50 text-rose-600 border-rose-100" :

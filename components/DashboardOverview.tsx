@@ -17,13 +17,14 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
   // 3. Compute overall aggregated valuation, at-risk, and stockouts
   let overallValuation = 0;
   let overallAtRisk = 0;
-  let mediumRiskCount = 0;
-  let lowRiskCount = 0;
   let totalSeededSKUsCount = 0;
   let sumServiceLevel = 0;
 
-  // Classifications array
-  const fsnConsumptions: number[] = [];
+  // Track product-specific aggregate info
+  const productAggregates: Record<string, { riskLevel: "High" | "Medium" | "Low"; maxConsumption: number }> = {};
+  masterProducts.forEach((p) => {
+    productAggregates[p.code] = { riskLevel: "Low", maxConsumption: 0 };
+  });
 
   stores.forEach((st) => {
     const inv = getStoreInventory(st.id);
@@ -31,29 +32,37 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
       overallValuation += item.currentStock * item.unitPrice;
       totalSeededSKUsCount++;
       sumServiceLevel += item.serviceLevel;
-      fsnConsumptions.push(item.avgDailyConsumption);
 
-      if (item.riskLevel === "High") {
-        overallAtRisk++;
-      } else if (item.riskLevel === "Medium") {
-        mediumRiskCount++;
-      } else {
-        lowRiskCount++;
+      const pInfo = productAggregates[item.code];
+      if (pInfo) {
+        if (item.avgDailyConsumption > pInfo.maxConsumption) {
+          pInfo.maxConsumption = item.avgDailyConsumption;
+        }
+        if (item.riskLevel === "High") {
+          pInfo.riskLevel = "High";
+        } else if (item.riskLevel === "Medium" && pInfo.riskLevel !== "High") {
+          pInfo.riskLevel = "Medium";
+        }
       }
     });
   });
 
   const formattedValuation = `$ ${(overallValuation / 1000000).toFixed(2)} M`;
-  const avgServiceLevel = totalSeededSKUsCount > 0 ? (sumServiceLevel / totalSeededSKUsCount).toFixed(1) : "95.0";
 
-  // FSN counts overall:
-  const fastCount = fsnConsumptions.filter((c) => c >= 25.0).length;
-  const slowCount = fsnConsumptions.filter((c) => c >= 5.0 && c < 25.0).length;
-  const nonCount = fsnConsumptions.filter((c) => c < 5.0).length;
-  const totalFSN = fsnConsumptions.length || 1;
+  // Product level counts for donuts
+  const productList = Object.values(productAggregates);
+  const totalUniqueProducts = productList.length || 1; // 150
 
-  const fastPercent = Math.round((fastCount / totalFSN) * 100);
-  const slowPercent = Math.round((slowCount / totalFSN) * 100);
+  const highRiskProductCount = productList.filter((p) => p.riskLevel === "High").length;
+  const mediumRiskProductCount = productList.filter((p) => p.riskLevel === "Medium").length;
+  const lowRiskProductCount = productList.filter((p) => p.riskLevel === "Low").length;
+
+  const fastMovingProductCount = productList.filter((p) => p.maxConsumption >= 25.0).length;
+  const slowMovingProductCount = productList.filter((p) => p.maxConsumption >= 5.0 && p.maxConsumption < 25.0).length;
+  const nonMovingProductCount = productList.filter((p) => p.maxConsumption < 5.0).length;
+
+  const fastPercent = Math.round((fastMovingProductCount / totalUniqueProducts) * 100);
+  const slowPercent = Math.round((slowMovingProductCount / totalUniqueProducts) * 100);
   const nonPercent = 100 - fastPercent - slowPercent;
 
   // 4. City risk breakdown (Chicago, Houston, Los Angeles, Denver)
@@ -76,14 +85,9 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
       name: city,
       storesAtRisk: storesAtRiskCount,
       totalStores: totalStoresInCity,
-      percent: 0
+      percent: Math.round((storesAtRiskCount / totalStoresInCity) * 100)
     };
   });
-  const maxCityRisk = Math.max(...cityAggregates.map((city) => city.storesAtRisk), 1);
-  const cityRiskBars = cityAggregates.map((city) => ({
-    ...city,
-    percent: Math.round((city.storesAtRisk / maxCityRisk) * 100)
-  }));
 
   // 5. Top 5 Products at risk (earliest predicted stockouts)
   const allAtRiskItems: { name: string; code: string; storesCount: number; soonestDate: string; timestamp: number }[] = [];
@@ -126,24 +130,23 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
     .slice(0, 5);
 
   const circumference = 251.3;
-  const formatPercent = (value: number, total: number) => Math.round((value / (total || 1)) * 100);
   const riskSegments = [
-    { label: "High Risk", range: "<= 7 Days", value: overallAtRisk, color: "#ef4444", dotClass: "bg-rose-500" },
-    { label: "Medium Risk", range: "8-15 Days", value: mediumRiskCount, color: "#f97316", dotClass: "bg-orange-500" },
-    { label: "Low Risk", range: "> 15 Days", value: lowRiskCount, color: "#008751", dotClass: "bg-bp-green" }
+    { label: "High Risk", range: "<= 7 Days", value: highRiskProductCount, color: "#ef4444", dotClass: "bg-rose-500" },
+    { label: "Medium Risk", range: "8-15 Days", value: mediumRiskProductCount, color: "#f97316", dotClass: "bg-orange-500" },
+    { label: "Low Risk", range: "> 15 Days", value: lowRiskProductCount, color: "#008751", dotClass: "bg-bp-green" }
   ];
   let riskOffset = 0;
   const riskDonutSegments = riskSegments.map((segment) => {
-    const length = (segment.value / (totalSeededSKUsCount || 1)) * circumference;
+    const length = (segment.value / totalUniqueProducts) * circumference;
     const offset = -riskOffset;
     riskOffset += length;
-    return { ...segment, length, offset, percent: formatPercent(segment.value, totalSeededSKUsCount) };
+    return { ...segment, length, offset, percent: Math.round((segment.value / totalUniqueProducts) * 100) };
   });
 
   const fsnSegments = [
-    { label: "Fast Moving", value: fastCount, percent: fastPercent, color: "#008751", dotClass: "bg-bp-green" },
-    { label: "Slow Moving", value: slowCount, percent: slowPercent, color: "#f97316", dotClass: "bg-orange-500" },
-    { label: "Non Moving", value: nonCount, percent: nonPercent, color: "#ef4444", dotClass: "bg-rose-500" }
+    { label: "Fast Moving", value: fastMovingProductCount, percent: fastPercent, color: "#008751", dotClass: "bg-bp-green" },
+    { label: "Slow Moving", value: slowMovingProductCount, percent: slowPercent, color: "#f97316", dotClass: "bg-orange-500" },
+    { label: "Non Moving", value: nonMovingProductCount, percent: nonPercent, color: "#ef4444", dotClass: "bg-rose-500" }
   ];
   let fsnOffset = 0;
   const fsnDonutSegments = fsnSegments.map((segment) => {
@@ -228,13 +231,13 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
                     fill="transparent"
                     className="transition-opacity duration-150 hover:opacity-80"
                   >
-                    <title>{`${segment.label}: ${segment.value} items (${segment.percent}%)`}</title>
+                    <title>{`${segment.label}: ${segment.value} products (${segment.percent}%)`}</title>
                   </circle>
                 ))}
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-xl font-bold text-slate-900">{totalSeededSKUsCount}</span>
-                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Items</span>
+                <span className="text-xl font-bold text-slate-900">{totalMasterProducts}</span>
+                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Products</span>
               </div>
             </div>
 
@@ -246,35 +249,8 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
                     <span className="text-slate-500 text-[10px]">{segment.label} ({segment.range})</span>
                     <span className="text-slate-800 font-bold">{segment.value} <span className="text-[10px] text-slate-400 font-bold">({segment.percent}%)</span></span>
                   </div>
-                  <div className="pointer-events-none absolute left-0 top-full z-20 mt-2 w-40 rounded-lg bg-slate-900 px-3 py-2 text-[10px] font-semibold text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
-                    {segment.value} inventory items, {segment.percent}% of tracked stock positions.
-                  </div>
                 </div>
               ))}
-            </div>
-
-            <div className="hidden">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-rose-500 flex-shrink-0" />
-                <div className="flex flex-col text-left">
-                  <span className="text-slate-500 text-[10px]">High Risk (≤ 7 Days)</span>
-                  <span className="text-slate-800 font-bold">{overallAtRisk} <span className="text-[10px] text-slate-400 font-bold">(10%)</span></span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-orange-500 flex-shrink-0" />
-                <div className="flex flex-col text-left">
-                  <span className="text-slate-500 text-[10px]">Medium Risk (8-15 Days)</span>
-                  <span className="text-slate-800 font-bold">15 <span className="text-[10px] text-slate-400 font-bold">(15%)</span></span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-bp-green flex-shrink-0" />
-                <div className="flex flex-col text-left">
-                  <span className="text-slate-500 text-[10px]">Low Risk (&gt; 15 Days)</span>
-                  <span className="text-slate-800 font-bold">75 <span className="text-[10px] text-slate-400 font-bold">(75%)</span></span>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -301,13 +277,13 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
                     fill="transparent"
                     className="transition-opacity duration-150 hover:opacity-80"
                   >
-                    <title>{`${segment.label}: ${segment.value} items (${segment.percent}%)`}</title>
+                    <title>{`${segment.label}: ${segment.value} products (${segment.percent}%)`}</title>
                   </circle>
                 ))}
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-xl font-bold text-slate-900">{totalFSN}</span>
-                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Items</span>
+                <span className="text-xl font-bold text-slate-900">{totalMasterProducts}</span>
+                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Products</span>
               </div>
             </div>
 
@@ -319,35 +295,8 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
                     <span className="text-slate-500 text-[10px]">{segment.label}</span>
                     <span className="text-slate-800 font-bold">{segment.percent}% <span className="text-[10px] text-slate-400">({segment.value})</span></span>
                   </div>
-                  <div className="pointer-events-none absolute left-0 top-full z-20 mt-2 w-40 rounded-lg bg-slate-900 px-3 py-2 text-[10px] font-semibold text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
-                    {segment.value} items classified as {segment.label.toLowerCase()}.
-                  </div>
                 </div>
               ))}
-            </div>
-
-            <div className="hidden">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-bp-green flex-shrink-0" />
-                <div className="flex flex-col">
-                  <span className="text-slate-500 text-[10px]">Fast Moving</span>
-                  <span className="text-slate-800 font-bold">{fastPercent}%</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-orange-500 flex-shrink-0" />
-                <div className="flex flex-col">
-                  <span className="text-slate-500 text-[10px]">Slow Moving</span>
-                  <span className="text-slate-800 font-bold">{slowPercent}%</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-rose-500 flex-shrink-0" />
-                <div className="flex flex-col">
-                  <span className="text-slate-500 text-[10px]">Non Moving</span>
-                  <span className="text-slate-800 font-bold">{nonPercent}%</span>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -398,17 +347,14 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
         <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm lg:col-span-2">
           <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-5 text-left">Stockout Risk by City</h3>
           <div className="space-y-4 font-semibold text-xs text-slate-700">
-            {cityRiskBars.map((city, idx) => (
+            {cityAggregates.map((city, idx) => (
               <div key={idx} className="space-y-1.5 text-left">
                 <div className="flex justify-between">
                   <span className="text-slate-800 font-semibold">{city.name}</span>
                   <span className="font-medium text-slate-500">{city.storesAtRisk} of {city.totalStores} stores at risk</span>
                 </div>
                 <div className="group relative h-2.5 w-full bg-slate-100 rounded-full">
-                  <div className="h-full bg-bp-green rounded-full transition-colors duration-150 group-hover:bg-bp-green-dark" style={{ width: `${city.percent}%` }} />
-                  <div className="pointer-events-none absolute right-0 top-full z-20 mt-2 rounded-lg bg-slate-900 px-3 py-2 text-[10px] font-semibold text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
-                    {city.name}: {city.storesAtRisk} risky stores, scaled against highest city count ({maxCityRisk}).
-                  </div>
+                  <div className="h-full bg-rose-500 rounded-full transition-colors duration-150 group-hover:bg-rose-600" style={{ width: `${city.percent}%` }} />
                 </div>
               </div>
             ))}
@@ -429,9 +375,6 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
             <div className="flex flex-col items-center z-10">
               <span className="text-3xl font-bold tracking-tight text-slate-900 leading-none">87%</span>
               <span className="text-xs text-bp-green font-bold uppercase tracking-wider mt-1">Good</span>
-            </div>
-            <div className="pointer-events-none absolute left-1/2 top-2 z-20 w-44 -translate-x-1/2 rounded-lg bg-slate-900 px-3 py-2 text-center text-[10px] font-semibold text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
-              87% forecast accuracy across the latest 30-day model window.
             </div>
           </div>
 

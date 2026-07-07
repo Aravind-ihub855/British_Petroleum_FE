@@ -211,18 +211,18 @@ for (let i = 0; i < 150; i++) {
   });
 }
 
-// 4. Relational Seeding Generator (Each store gets between 100 and 200 random products deterministically)
+// 4. Relational Seeding Generator (Each store gets between 100 and 140 random products dynamically)
 export function getStoreInventory(storeId: string): InventoryItem[] {
   const storeSeed = getSeedHash(storeId);
   
-  // Deterministic target count between 100 and 200 products
-  const targetCount = 100 + (storeSeed % 101); // 100 to 200 items
+  // Dynamic target count between 100 and 140 products
+  const targetCount = 100 + (storeSeed % 41); 
 
   const inventory: InventoryItem[] = [];
 
   for (let i = 0; i < targetCount; i++) {
-    // Deterministic lookup index from masterProducts
-    const productIdx = (storeSeed + i * 3) % masterProducts.length;
+    // Step by 7 (which is coprime to 150) to query all unique products
+    const productIdx = (storeSeed + i * 7) % masterProducts.length;
     const product = masterProducts[productIdx];
 
     // Skip duplicates inside same store catalog
@@ -254,7 +254,10 @@ export function getStoreInventory(storeId: string): InventoryItem[] {
       product.code === "BP-PROD-003" ||
       product.code === "BP-PROD-004";
 
-    if (isRegionalShortage) {
+    if (storeId === "ST-003" || storeId === "ST-006") {
+      // Force healthy inventory levels for ST-003 and ST-006 so they act as fully non-risk stores
+      currentStock = Math.round(avgConsumption * (15 + (itemSeed % 15)));
+    } else if (isRegionalShortage) {
       const cityDemandSkew = stores.find((store) => store.id === storeId)?.city.length || 0;
       const shortageCoverageDays = 1 + ((itemSeed + storeSeed + productIdx + cityDemandSkew) % 6);
       currentStock = Math.max(1, Math.round(avgConsumption * shortageCoverageDays)); // 1 to 6 days of stock
