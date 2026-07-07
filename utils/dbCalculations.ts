@@ -1,7 +1,7 @@
 import { Store, Vendor, Product, InventoryItem } from "./mockDb";
 
 // We'll reuse the types from mockDb, but we WON'T use its data arrays.
-import { PurchaseOrder, PurchaseRequest, AIRecommendation, VendorECOT } from "./mockDb";
+import { PurchaseOrder, PurchaseRequest, AIRecommendation, VendorECOT, VendorIssue } from "./mockDb";
 
 // Simple deterministic hash function based on string
 const getSeedHash = (str: string): number => {
@@ -44,11 +44,13 @@ export function generateDBProcurementData(stores: Store[], vendors: Vendor[]) {
   const purchaseRequests: PurchaseRequest[] = [];
   const recommendations: AIRecommendation[] = [];
 
+  const issues: VendorIssue[] = [];
+
   if (vendors.length === 0 || stores.length === 0) {
-    return { purchaseOrders, purchaseRequests, recommendations };
+    return { purchaseOrders, purchaseRequests, issues, recommendations };
   }
 
-  const statuses = ["Pending Approval", "Approved", "In Transit", "Delivered", "Delivered", "Delivered", "Delayed", "Cancelled"];
+  const statuses = ["Pending Approval", "Pending Review", "Returned", "Approved", "In Transit", "Delivered", "Delivered", "Delivered", "Delayed", "Cancelled"];
   
   const today = new Date();
   
@@ -121,7 +123,30 @@ export function generateDBProcurementData(stores: Store[], vendors: Vendor[]) {
     });
   }
 
-  return { purchaseOrders, purchaseRequests, recommendations };
+  // Generate some realistic Vendor Issues based on vendors
+  const issueTypes = ["Delivery delayed by 2 days", "Fill Rate below SLA", "Invoice mismatch", "Quality control failure", "Missing documentation"];
+  const severities = ["High", "Medium", "Low", "Critical", "Medium"];
+  
+  vendors.forEach((vendor, vIdx) => {
+    const seed = getSeedHash(vendor.id + "issue");
+    // Not every vendor has issues, let's say 1 in 3 vendors have an issue today
+    if (seed % 3 === 0) {
+      const issueIdx = seed % issueTypes.length;
+      issues.push({
+        id: `ISSUE-${1000 + vIdx}`,
+        vendorId: vendor.id,
+        vendorName: vendor.name,
+        issueType: issueTypes[issueIdx],
+        description: `Vendor has reported ${issueTypes[issueIdx].toLowerCase()}.`,
+        dateReported: new Date(today.getTime() - (seed % 5) * 86400000).toISOString().split("T")[0],
+        status: (seed % 4 === 0) ? "Resolved" : "Open",
+        priority: severities[issueIdx] as any,
+        relatedPO: `PO-${10000 + vIdx * 100}`
+      });
+    }
+  });
+
+  return { purchaseOrders, purchaseRequests, issues, recommendations };
 }
 
 export function getVendorsForProductDB(vendors: Vendor[], productCode: string) {
@@ -172,6 +197,12 @@ export function getProductsForVendorDB(masterProducts: Product[], vendorId: stri
         productCode: p.code,
         productName: p.name,
         category: p.category,
+        uom: p.uom,
+        unitCost: p.unitPrice ? parseFloat((p.unitPrice * (0.8 + (seed % 40) / 100)).toFixed(2)) : (1.5 + (seed % 10)),
+        deliveryTime: `${1 + (seed % 5)} Days`,
+        isSoleSource: seed % 4 === 0,
+        fsnClass: p.code === "BP-PROD-001" ? "Fast" : (seed % 2 === 0 ? "Normal" : "Slow"),
+        deliveriesCount: 20 + (seed % 100),
         overallScore: parseFloat((8.0 + (seed % 20) / 10).toFixed(1)),
         spend: 5000 + (seed % 20000),
         onTimePercent: 80 + (seed % 20),

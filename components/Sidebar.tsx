@@ -143,7 +143,7 @@ export default function Sidebar({
           <div className="flex items-center gap-2.5">
             <img src="/logo/BP.svg" alt="BP Logo" className="w-6.5 h-6.5 object-contain" />
             <span className="font-extrabold text-sm text-slate-900 tracking-tight font-sans">
-              bp Convenience
+              BP Convenience
             </span>
           </div>
           {/* Mobile close button */}
