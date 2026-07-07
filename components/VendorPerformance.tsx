@@ -2,12 +2,11 @@
 
 import React, { useEffect } from "react";
 import {
-  vendors,
-  masterProducts,
   getVendorPerformanceMetrics,
   getVendorsForProduct,
   getProductsForVendor
 } from "@/utils/mockDb";
+import { useData } from "@/context/DataContext";
 
 interface VendorPerformanceProps {
   subTab: string;
@@ -28,16 +27,28 @@ export default function VendorPerformance({
   setSelectedProductCode,
   onNavigate
 }: VendorPerformanceProps) {
+  const { vendors, masterProducts, loading } = useData();
   
   // Set defaults if state is empty
   useEffect(() => {
-    if (!selectedVendorName && vendors.length > 0) {
+    if (!loading && vendors.length > 0 && !selectedVendorName) {
       setSelectedVendorName(vendors[0].name);
     }
-    if (!selectedProductCode && masterProducts.length > 0) {
+    if (!loading && masterProducts.length > 0 && !selectedProductCode) {
       setSelectedProductCode(masterProducts[0].code);
     }
-  }, [selectedVendorName, selectedProductCode, setSelectedVendorName, setSelectedProductCode]);
+  }, [loading, vendors, masterProducts, selectedVendorName, selectedProductCode, setSelectedVendorName, setSelectedProductCode]);
+
+  if (loading || (vendors.length > 0 && !selectedVendorName) || (masterProducts.length > 0 && !selectedProductCode)) {
+    return (
+      <div className="flex justify-center items-center py-12 bg-white/40 backdrop-blur-md rounded-3xl p-8 border border-slate-200/50">
+        <svg className="animate-spin h-8 w-8 text-bp-green" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+        </svg>
+      </div>
+    );
+  }
 
   // Tab 1 overview metrics
   const performanceLogs = getVendorPerformanceMetrics();

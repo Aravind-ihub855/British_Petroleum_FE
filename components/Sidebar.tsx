@@ -32,7 +32,7 @@ export const sidebarItems: SidebarItem[] = [
     name: "Vendor Performance",
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20H7m0 0v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
       </svg>
     ),
   },
@@ -72,7 +72,33 @@ export const sidebarItems: SidebarItem[] = [
       </svg>
     ),
   },
+  {
+    id: "8",
+    name: "User Management",
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    ),
+  },
 ];
+
+export const getRoleAllowedTabs = (role: string): string[] => {
+  switch (role?.toLowerCase()) {
+    case "store manager":
+      return ["2"];
+    case "vendor manager":
+      return ["2", "3"];
+    case "regional head":
+      return ["1", "2", "3", "4", "5"];
+    case "retail head":
+      return ["1", "2", "3", "4", "5", "6", "7"];
+    case "super admin":
+      return ["8"];
+    default:
+      return ["2"];
+  }
+};
 
 interface SidebarProps {
   activeTab: string;
@@ -80,6 +106,7 @@ interface SidebarProps {
   user: {
     name: string;
     email: string;
+    role: string;
   };
   logout: () => void;
   isOpen: boolean;
@@ -94,6 +121,12 @@ export default function Sidebar({
   isOpen,
   onClose,
 }: SidebarProps) {
+  const allowedTabIds = getRoleAllowedTabs(user.role);
+  const allowedItems = sidebarItems.filter((item) => allowedTabIds.includes(item.id));
+  
+  const coreItems = allowedItems.filter((item) => ["1", "2", "3", "4", "5"].includes(item.id));
+  const systemItems = allowedItems.filter((item) => ["6", "7", "8"].includes(item.id));
+
   return (
     <aside
       className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200/80 flex flex-col justify-between h-screen transition-transform duration-300 transform lg:translate-x-0 lg:static sticky top-0`}
@@ -121,68 +154,73 @@ export default function Sidebar({
 
         {/* Scrollable Navigation section */}
         <nav className="p-4 space-y-1 overflow-y-auto flex-grow scrollbar-thin">
-          {/* CORE PLATFORM Header */}
-          <div className="px-3 py-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-            <span>Core Platform</span>
-            <span className="flex-grow h-px bg-slate-100" />
-          </div>
+          {/* CORE PLATFORM section */}
+          {coreItems.length > 0 && (
+            <>
+              <div className="px-3 py-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <span>Core Platform</span>
+                <span className="flex-grow h-px bg-slate-100" />
+              </div>
+              {coreItems.map((item) => {
+                const isSelected = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setActiveTab(item.id);
+                      onClose();
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition duration-150 font-semibold text-sm text-left border-2 ${
+                      isSelected
+                        ? "bg-bp-green/5 border-bp-green text-slate-955 shadow-sm"
+                        : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span className={`${isSelected ? "text-bp-green" : "text-slate-400"}`}>
+                      {item.icon}
+                    </span>
+                    <span>
+                      {item.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </>
+          )}
 
-          {sidebarItems.slice(0, 5).map((item) => {
-            const isSelected = activeTab === item.id;
-
-            return (
-              <button
-                key={item.id}
-                onClick={() => {
-                  setActiveTab(item.id);
-                  onClose();
-                }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition duration-150 font-semibold text-sm text-left border-2 ${
-                  isSelected
-                    ? "bg-bp-green/5 border-bp-green text-slate-950 shadow-sm"
-                    : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-                }`}
-              >
-                <span className={`${isSelected ? "text-bp-green" : "text-slate-400"}`}>
-                  {item.icon}
-                </span>
-                <span>
-                  {item.id}. {item.name}
-                </span>
-              </button>
-            );
-          })}
-
-          {/* SYSTEM & REPORTS Header */}
-          <div className="px-3 py-2.5 mt-4 text-[9px] font-extrabold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-            <span>System & Reports</span>
-            <span className="flex-grow h-px bg-slate-100" />
-          </div>
-
-          {sidebarItems.slice(5).map((item) => {
-            const isSelected = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => {
-                  setActiveTab(item.id);
-                  onClose();
-                }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition duration-150 font-semibold text-sm text-left border-2 ${
-                  isSelected
-                    ? "bg-bp-green/5 border-bp-green text-slate-950 shadow-sm"
-                    : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-                }`}
-              >
-                <span className={`${isSelected ? "text-bp-green" : "text-slate-400"}`}>
-                  {item.icon}
-                </span>
-                <span>
-                  {item.id}. {item.name}
-                </span>
-              </button>
-            );
-          })}
+          {/* SYSTEM & REPORTS section */}
+          {systemItems.length > 0 && (
+            <>
+              <div className="px-3 py-2.5 mt-4 text-[9px] font-extrabold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <span>System & Reports</span>
+                <span className="flex-grow h-px bg-slate-100" />
+              </div>
+              {systemItems.map((item) => {
+                const isSelected = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setActiveTab(item.id);
+                      onClose();
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition duration-150 font-semibold text-sm text-left border-2 ${
+                      isSelected
+                        ? "bg-bp-green/5 border-bp-green text-slate-955 shadow-sm"
+                        : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span className={`${isSelected ? "text-bp-green" : "text-slate-400"}`}>
+                      {item.icon}
+                    </span>
+                    <span>
+                      {item.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </>
+          )}
         </nav>
       </div>
 
@@ -195,7 +233,7 @@ export default function Sidebar({
           </div>
           <div className="flex flex-col text-left overflow-hidden">
             <span className="text-xs font-bold text-slate-800 truncate leading-none">{user.name}</span>
-            <span className="text-[10px] text-slate-400 font-semibold truncate mt-1.5">{user.email}</span>
+            <span className="text-[10px] text-slate-400 font-semibold truncate mt-1.5">{user.role || "User"}</span>
           </div>
         </div>
         

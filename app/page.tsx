@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
-import Sidebar, { sidebarItems } from "@/components/Sidebar";
+import Sidebar, { sidebarItems, getRoleAllowedTabs } from "@/components/Sidebar";
 import DashboardOverview from "@/components/DashboardOverview";
 import TabPlaceholder from "@/components/TabPlaceholder";
 
@@ -15,6 +15,7 @@ import DemandForecasting from "@/components/DemandForecasting";
 import VendorPerformance from "@/components/VendorPerformance";
 import MasterData from "@/components/MasterData";
 import Reports from "@/components/Reports";
+import UserManagement from "@/components/UserManagement";
 
 // Helper to load descriptions for the header
 const getTabMetadata = (tab: string) => {
@@ -47,6 +48,10 @@ const getTabMetadata = (tab: string) => {
       return {
         description: "Generate and download custom inventory planning and forecasting reports.",
       };
+    case "8":
+      return {
+        description: "Register new persona logins and view active convenience store system accounts.",
+      };
     default:
       return {
         description: "Predictive planning and stockout analysis panel.",
@@ -56,7 +61,7 @@ const getTabMetadata = (tab: string) => {
 
 export default function Home() {
   const { user, logout, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState<string>("1");
+  const [activeTab, setActiveTab] = useState<string>("");
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [subTab, setSubTab] = useState<string>("store"); // store | location | product
 
@@ -65,23 +70,47 @@ export default function Home() {
   const [selectedVendorName, setSelectedVendorName] = useState<string>("");
   const [selectedProductCode, setSelectedProductCode] = useState<string>("");
 
+  // Initialize active tab based on user role when loaded
+  useEffect(() => {
+    if (user && !activeTab) {
+      const allowed = getRoleAllowedTabs(user.role);
+      setActiveTab(allowed[0] || "2");
+    }
+  }, [user, activeTab]);
+
+  // Route protection redirect helper
+  useEffect(() => {
+    if (user && activeTab) {
+      const allowed = getRoleAllowedTabs(user.role);
+      if (!allowed.includes(activeTab)) {
+        setActiveTab(allowed[0] || "2");
+      }
+    }
+  }, [user, activeTab]);
+
   const handleCrossNavigate = (
     tabId: string,
     subTabId: string,
     vendorName?: string,
     productCode?: string
   ) => {
-    setActiveTab(tabId);
-    setVendorSubTab(subTabId);
-    if (vendorName) {
-      setSelectedVendorName(vendorName);
-    }
-    if (productCode) {
-      setSelectedProductCode(productCode);
+    // Check if destination tab is allowed for this role
+    if (user) {
+      const allowed = getRoleAllowedTabs(user.role);
+      if (allowed.includes(tabId)) {
+        setActiveTab(tabId);
+        setVendorSubTab(subTabId);
+        if (vendorName) {
+          setSelectedVendorName(vendorName);
+        }
+        if (productCode) {
+          setSelectedProductCode(productCode);
+        }
+      }
     }
   };
 
-  if (loading) {
+  if (loading || !activeTab) {
     return (
       <div className="flex-grow flex items-center justify-center bg-bp-cream min-h-screen">
         <div className="flex flex-col items-center gap-4">
@@ -227,6 +256,9 @@ export default function Home() {
           ) : activeTab === "7" ? (
             /* Tab 7: Reports */
             <Reports />
+          ) : activeTab === "8" ? (
+            /* Tab 8: User Management */
+            <UserManagement />
           ) : (
             <TabPlaceholder
               tabName={currentTabName}

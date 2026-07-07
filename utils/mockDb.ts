@@ -41,6 +41,7 @@ export interface Product {
 }
 
 export interface InventoryItem extends Product {
+  storeId?: string;
   currentStock: number;
   safetyStockLevel: number;
   predictedStockoutDate: string;
