@@ -184,17 +184,17 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
   });
   const topAtRiskProducts = allAtRiskItems.sort((a, b) => a.timestamp - b.timestamp).slice(0, 5);
 
-  const categoryRiskMap: Record<string, { le3: number; fourTo7: number; gt7: number; total: number }> = {};
+  const categoryRiskMap: Record<string, { le7: number; eightTo15: number; gt15: number; total: number }> = {};
   const seenCodes = new Set<string>();
   Object.entries(productAggregates).forEach(([code, info]) => {
     if (seenCodes.has(code)) return;
     seenCodes.add(code);
     const cat = info.category;
-    if (!categoryRiskMap[cat]) categoryRiskMap[cat] = { le3: 0, fourTo7: 0, gt7: 0, total: 0 };
+    if (!categoryRiskMap[cat]) categoryRiskMap[cat] = { le7: 0, eightTo15: 0, gt15: 0, total: 0 };
     categoryRiskMap[cat].total++;
-    if (info.daysToStockout <= 3) categoryRiskMap[cat].le3++;
-    else if (info.daysToStockout <= 7) categoryRiskMap[cat].fourTo7++;
-    else categoryRiskMap[cat].gt7++;
+    if (info.daysToStockout <= 7) categoryRiskMap[cat].le7++;
+    else if (info.daysToStockout <= 15) categoryRiskMap[cat].eightTo15++;
+    else categoryRiskMap[cat].gt15++;
   });
   const categoryRows = Object.entries(categoryRiskMap).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.total - a.total).slice(0, 6);
   const maxCatTotal = Math.max(...categoryRows.map((c) => c.total), 1);
@@ -452,7 +452,7 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
                 </thead>
                 <tbody className="divide-y divide-slate-100/60 font-semibold text-slate-700">
                   {topAtRiskProducts.map((row, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50/60 cursor-pointer" onClick={() => onNavigate("2", "store")}>
+                    <tr key={idx} className="hover:bg-slate-50/60 cursor-pointer" onClick={() => onNavigate("2", "store", undefined, row.code)}>
                       <td className="py-3 text-bp-green font-semibold text-left truncate max-w-[100px]" title={row.name}>{row.name}</td>
                       {isStoreManager
                         ? <td className={`py-3 text-center font-bold ${row.daysRemaining <= 3 ? "text-rose-600" : "text-amber-600"}`}>{row.daysRemaining}</td>
@@ -478,9 +478,9 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
           <div className="flex items-center justify-between mb-5">
             <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Stockout Risk by Category</h3>
             <div className="flex items-center gap-4 text-[10px] font-bold text-slate-500">
-              <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded-sm bg-rose-500 inline-block" />= 3 Days</span>
-              <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded-sm bg-amber-400 inline-block" />4-7 Days</span>
-              <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded-sm bg-bp-green inline-block" />&gt; 7 Days</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded-sm bg-rose-500 inline-block" />&le; 7 Days</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded-sm bg-amber-400 inline-block" />8-15 Days</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded-sm bg-bp-green inline-block" />&gt; 15 Days</span>
             </div>
           </div>
           <div className="space-y-3">
@@ -488,17 +488,17 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
               <div key={idx} className="flex items-center gap-3 text-xs">
                 <span className="w-28 text-slate-700 font-semibold text-right flex-shrink-0 truncate" title={cat.name}>{cat.name}</span>
                 <div className="flex-grow flex h-6 rounded-lg overflow-hidden bg-slate-100">
-                  {cat.le3 > 0 && (
+                  {cat.le7 > 0 && (
                     <div className="bg-rose-500 flex items-center justify-center text-white font-bold text-[9px]"
-                      style={{ width: `${(cat.le3 / maxCatTotal) * 100}%`, minWidth: "20px" }} title={`=3 Days: ${cat.le3}`}>{cat.le3}</div>
+                      style={{ width: `${(cat.le7 / maxCatTotal) * 100}%`, minWidth: "20px" }} title={`≤7 Days: ${cat.le7}`}>{cat.le7}</div>
                   )}
-                  {cat.fourTo7 > 0 && (
+                  {cat.eightTo15 > 0 && (
                     <div className="bg-amber-400 flex items-center justify-center text-white font-bold text-[9px] ml-0.5"
-                      style={{ width: `${(cat.fourTo7 / maxCatTotal) * 100}%`, minWidth: "20px" }} title={`4-7 Days: ${cat.fourTo7}`}>{cat.fourTo7}</div>
+                      style={{ width: `${(cat.eightTo15 / maxCatTotal) * 100}%`, minWidth: "20px" }} title={`8-15 Days: ${cat.eightTo15}`}>{cat.eightTo15}</div>
                   )}
-                  {cat.gt7 > 0 && (
+                  {cat.gt15 > 0 && (
                     <div className="bg-bp-green flex items-center justify-center text-white font-bold text-[9px] ml-0.5"
-                      style={{ width: `${(cat.gt7 / maxCatTotal) * 100}%`, minWidth: "20px" }} title={`>7 Days: ${cat.gt7}`}>{cat.gt7}</div>
+                      style={{ width: `${(cat.gt15 / maxCatTotal) * 100}%`, minWidth: "20px" }} title={`>15 Days: ${cat.gt15}`}>{cat.gt15}</div>
                   )}
                 </div>
                 <span className="w-6 text-slate-500 font-bold text-right flex-shrink-0">{cat.total}</span>
@@ -507,7 +507,7 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm flex flex-col justify-between items-center">
+        {/* <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm flex flex-col justify-between items-center">
           <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-2 self-start w-full text-left">Forecast Accuracy</h3>
           <div className="group relative w-36 h-24 flex items-end justify-center overflow-hidden">
             <svg className="w-36 h-36 absolute top-0" viewBox="0 0 100 100">
@@ -522,7 +522,7 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
             </div>
           </div>
           <div className="text-center text-slate-400 text-[10px] font-bold uppercase tracking-wider mt-4">Calculated against 30-day forecast models</div>
-        </div>
+        </div> */}
 
       </div>
     </div>

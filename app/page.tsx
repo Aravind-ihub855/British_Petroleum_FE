@@ -11,6 +11,7 @@ import TabPlaceholder from "@/components/TabPlaceholder";
 import StoreDashboard from "@/components/StoreDashboard";
 import LocationDashboard from "@/components/LocationDashboard";
 import ProductDashboard from "@/components/ProductDashboard";
+import ProductDetails from "@/components/ProductDetails";
 import InventoryAnalysis from "@/components/InventoryAnalysis";
 import DemandForecasting from "@/components/DemandForecasting";
 import VendorPerformance from "@/components/VendorPerformance";
@@ -231,8 +232,21 @@ export default function Home() {
 
               {/* Render Selected Sub-tab view */}
               <div className="pt-2 animate-fade-in">
-                {subTab === "store" ? (
-                  <StoreDashboard onNavigate={handleCrossNavigate} />
+                {selectedProductCode ? (
+                  <ProductDetails
+                    productCode={selectedProductCode}
+                    onBack={() => setSelectedProductCode("")}
+                  />
+                ) : subTab === "store" ? (
+                  <StoreDashboard
+                    onNavigate={(tabId, subTabId, vend, prod) => {
+                      if (prod) {
+                        setSelectedProductCode(prod);
+                      } else {
+                        handleCrossNavigate(tabId, subTabId, vend, prod);
+                      }
+                    }}
+                  />
                 ) : subTab === "location" ? (
                   <LocationDashboard />
                 ) : (
