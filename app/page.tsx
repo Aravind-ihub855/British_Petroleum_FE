@@ -11,6 +11,10 @@ import StoreDashboard from "@/components/StoreDashboard";
 import LocationDashboard from "@/components/LocationDashboard";
 import ProductDashboard from "@/components/ProductDashboard";
 import InventoryAnalysis from "@/components/InventoryAnalysis";
+import DemandForecasting from "@/components/DemandForecasting";
+import VendorPerformance from "@/components/VendorPerformance";
+import MasterData from "@/components/MasterData";
+import Reports from "@/components/Reports";
 
 // Helper to load descriptions for the header
 const getTabMetadata = (tab: string) => {
@@ -178,9 +182,21 @@ export default function Home() {
                 )}
               </div>
             </div>
+          ) : activeTab === "3" ? (
+            /* Tab 3: Vendor Performance */
+            <VendorPerformance />
           ) : activeTab === "4" ? (
             /* Tab 4: Inventory Analysis (FSN classification) */
             <InventoryAnalysis />
+          ) : activeTab === "5" ? (
+            /* Tab 5: Demand Forecasting */
+            <DemandForecasting />
+          ) : activeTab === "6" ? (
+            /* Tab 6: Master Data */
+            <MasterData />
+          ) : activeTab === "7" ? (
+            /* Tab 7: Reports */
+            <Reports />
           ) : (
             <TabPlaceholder
               tabName={currentTabName}
