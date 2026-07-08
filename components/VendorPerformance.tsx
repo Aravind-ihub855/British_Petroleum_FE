@@ -475,10 +475,8 @@ export default function VendorPerformance({
                       <td className="py-2.5 px-1.5 text-center border-r border-slate-100">
                         {(() => {
                           const fsn = getProductFsnClass(row.productCode);
-                            fsn === "Slow" ? "bg-amber-50 text-amber-600 border-amber-100" :
-                            "bg-rose-50 text-rose-600 border-rose-100";
                           return (
-                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${fsnStyle}`}>
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold border bg-slate-50 text-slate-600 border-slate-200">
                               {fsn}
                             </span>
                           );

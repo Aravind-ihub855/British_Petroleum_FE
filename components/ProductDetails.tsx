@@ -209,10 +209,10 @@ export default function ProductDetails({ productCode, onBack }: ProductDetailsPr
   const dynamicRol = Math.ceil(item.avgDailyConsumption * item.leadTimeDays) + item.safetyStockLevel;
 
   // Setup SVG scale coordinates
-  const paddingLeft = 60;
+  const paddingLeft = 70;
   const paddingRight = 40;
   const paddingTop = 60;
-  const paddingBottom = 40;
+  const paddingBottom = 50;
   const plotWidth = 800;
   const plotHeight = 180;
   const viewBoxWidth = plotWidth + paddingLeft + paddingRight;
@@ -243,18 +243,6 @@ export default function ProductDetails({ productCode, onBack }: ProductDetailsPr
 
   return (
     <div className="space-y-6">
-      
-      <div className="flex w-full items-center justify-end">
-        <button
-          onClick={onBack}
-          className="ml-auto border border-emerald-500/20 text-bp-green hover:bg-slate-50 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition duration-150"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          Back to List
-        </button>
-      </div>
 
       <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6 text-left">
         <div className="space-y-4">
@@ -285,19 +273,21 @@ export default function ProductDetails({ productCode, onBack }: ProductDetailsPr
           </div>
         </div>
 
-        <div className="flex items-center gap-6 border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-10">
+        <div className="flex items-center gap-6 border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-8 flex-shrink-0">
           <div className="flex flex-col">
             <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Current Stock</span>
             <span className="text-3xl font-extrabold tracking-tight text-bp-green">
               {item.currentStock} <span className="text-sm font-semibold text-slate-500">{item.uom}</span>
             </span>
           </div>
-          {/* <div className="flex flex-col">
-            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Storage Location</span>
-            <span className="text-xs font-bold text-slate-700 leading-snug">
-              {item.storageLocation || "Shelves / Drums"}
-            </span>
-          </div> */}
+          <div className="flex flex-col border-l border-slate-100 pl-6">
+            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1.5">Stock Status</span>
+            <div className="flex items-center h-8">
+              <span className={`px-2.5 py-1 rounded text-xs font-bold leading-none ${status.style}`}>
+                {status.text}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -312,6 +302,10 @@ export default function ProductDetails({ productCode, onBack }: ProductDetailsPr
           <div className="min-w-[900px] select-none">
             <svg className="w-full h-auto overflow-visible" viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`} fill="none">
               
+              {/* Axes Lines */}
+              <line x1={paddingLeft} y1={paddingTop - 15} x2={paddingLeft} y2={paddingTop + plotHeight} stroke="#cbd5e1" strokeWidth="1.5" />
+              <line x1={paddingLeft} y1={paddingTop + plotHeight} x2={paddingLeft + plotWidth} y2={paddingTop + plotHeight} stroke="#cbd5e1" strokeWidth="1.5" />
+
               {/* Grid Lines */}
               {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
                 const val = Math.round(maxVal * ratio);
@@ -319,13 +313,13 @@ export default function ProductDetails({ productCode, onBack }: ProductDetailsPr
                 return (
                   <g key={ratio}>
                     <line x1={paddingLeft} y1={y} x2={paddingLeft + plotWidth} y2={y} stroke="#f1f5f9" strokeWidth="1" />
-                    <text x={paddingLeft - 10} y={y + 4} fill="#94a3b8" className="text-[10px] font-bold text-right" textAnchor="end">{val}</text>
+                    <text x={paddingLeft - 12} y={y + 3.5} fill="#64748b" className="text-[10px] font-semibold text-right" textAnchor="end">{val}</text>
                   </g>
                 );
               })}
 
               {/* Y Axis Label */}
-              <text x={paddingLeft - 10} y={paddingTop - 15} fill="#64748b" className="text-[10px] font-bold" textAnchor="end">Quantity ({item.uom.charAt(0)})</text>
+              <text transform="rotate(-90)" x={-(paddingTop + plotHeight / 2)} y={22} fill="#334155" className="text-[10px] font-extrabold uppercase tracking-wider" textAnchor="middle">Quantity ({item.uom})</text>
 
               {/* X Axis Date labels (Every 2 days to keep uncluttered) */}
               {points.map((p, idx) => {
@@ -334,20 +328,20 @@ export default function ProductDetails({ productCode, onBack }: ProductDetailsPr
                 return (
                   <g key={idx}>
                     <line x1={x} y1={paddingTop + plotHeight} x2={x} y2={paddingTop + plotHeight + 5} stroke="#cbd5e1" strokeWidth="1" />
-                    <text x={x} y={paddingTop + plotHeight + 18} fill="#64748b" className="text-[10px] font-bold" textAnchor="middle">{p.formatted}</text>
+                    <text x={x} y={paddingTop + plotHeight + 18} fill="#64748b" className="text-[10px] font-semibold" textAnchor="middle">{p.formatted}</text>
                   </g>
                 );
               })}
 
               {/* X Axis Label */}
-              <text x={paddingLeft + plotWidth / 2} y={paddingTop + plotHeight + 35} fill="#64748b" className="text-[10px] font-bold" textAnchor="middle">Date</text>
+              <text x={paddingLeft + plotWidth / 2} y={paddingTop + plotHeight + 38} fill="#334155" className="text-[10px] font-extrabold uppercase tracking-wider" textAnchor="middle">Date</text>
 
               {/* Horizontal Reference Lines: ROL and Safety Stock */}
-              <line x1={paddingLeft} y1={rolY} x2={paddingLeft + plotWidth} y2={rolY} stroke="#f59e0b" strokeWidth="1.25" strokeDasharray="5,5" />
+              <line x1={paddingLeft} y1={rolY} x2={paddingLeft + plotWidth} y2={rolY} stroke="#3b82f6" strokeWidth="1.25" strokeDasharray="5,5" />
               <line x1={paddingLeft} y1={safetyY} x2={paddingLeft + plotWidth} y2={safetyY} stroke="#f43f5e" strokeWidth="1.25" strokeDasharray="5,5" />
 
               {/* Labels for horizontal markers on the right edge */}
-              <text x={paddingLeft + plotWidth - 5} y={rolY - 4} fill="#f59e0b" className="text-[9px] font-extrabold" textAnchor="end">ROL ({dynamicRol})</text>
+              <text x={paddingLeft + plotWidth - 5} y={rolY - 4} fill="#3b82f6" className="text-[9px] font-extrabold" textAnchor="end">ROL ({dynamicRol})</text>
               <text x={paddingLeft + plotWidth - 5} y={safetyY - 4} fill="#f43f5e" className="text-[9px] font-extrabold" textAnchor="end">Safety Stock ({item.safetyStockLevel})</text>
 
               {/* Vertical Marker Line: Order Before */}
@@ -409,12 +403,6 @@ export default function ProductDetails({ productCode, onBack }: ProductDetailsPr
             <div className="flex justify-between items-center py-0.5">
               <span className="text-slate-400 font-medium">Min. Stock to Avoid Stockout</span>
               <span>{item.safetyStockLevel} {item.uom}</span>
-            </div>
-            <div className="flex justify-between items-center py-0.5 border-t border-slate-50 pt-3 mt-1">
-              <span className="text-slate-400 font-medium">Stock Status</span>
-              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${status.style}`}>
-                {status.text}
-              </span>
             </div>
           </div>
         </div>

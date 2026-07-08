@@ -13,6 +13,9 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
   const { user } = useAuth();
   const isStoreManager = user?.role === "store manager";
 
+  const [hoveredRisk, setHoveredRisk] = React.useState<{ label: string; value: number; percent: number } | null>(null);
+  const [hoveredFsn, setHoveredFsn] = React.useState<{ label: string; value: number; percent: number } | null>(null);
+
   // Always use actual today (midnight) for all date calculations
   const TODAY = new Date();
   TODAY.setHours(0, 0, 0, 0);
@@ -128,6 +131,12 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
   const inventoryHealthPct = totalSeededSKUsCount > 0 ? Math.round((healthyCount / totalSeededSKUsCount) * 100) : 0;
   const inventoryHealthLabel = inventoryHealthPct >= 70 ? "Good" : inventoryHealthPct >= 50 ? "Warning" : "Critical";
   const inventoryHealthColor = inventoryHealthPct >= 70 ? "text-bp-green" : inventoryHealthPct >= 50 ? "text-amber-500" : "text-rose-600";
+  const healthTheme =
+    inventoryHealthPct >= 70
+      ? { border: "border-t-bp-green", bg: "bg-emerald-50", text: "text-bp-green" }
+      : inventoryHealthPct >= 50
+      ? { border: "border-t-amber-500", bg: "bg-amber-50", text: "text-amber-600" }
+      : { border: "border-t-rose-500", bg: "bg-rose-50", text: "text-rose-600" };
   // For store manager: show product count; for others: show store count
   const criticalStockoutDisplay = isStoreManager ? overallHighRiskProductCount : overallAtRisk;
   const atRiskPct = isStoreManager
@@ -295,15 +304,15 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
           <p className="text-[10px] text-slate-400 mt-1 font-medium">{belowReorderPct}% SKU reorder limits</p>
         </div>
 
-        <div className="bg-white border-t-4 border-t-emerald-500 border-x border-b border-slate-100 rounded-2xl p-5 shadow-sm card-hover-effect text-left">
+        <div className={`bg-white border-t-4 ${healthTheme.border} border-x border-b border-slate-100 rounded-2xl p-5 shadow-sm card-hover-effect text-left`}>
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-7 h-7 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600 flex-shrink-0">
+            <div className={`w-7 h-7 ${healthTheme.bg} rounded-lg flex items-center justify-center ${healthTheme.text} flex-shrink-0`}>
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             </div>
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-600">Inventory Health</span>
+            <span className={`text-[10px] font-extrabold uppercase tracking-wider ${healthTheme.text}`}>Inventory Health</span>
           </div>
-          <span className={`text-3xl font-extrabold tracking-tight ${inventoryHealthColor}`}>{inventoryHealthPct}%</span>
-          <p className={`text-[10px] font-extrabold mt-1 uppercase ${inventoryHealthColor}`}>{inventoryHealthLabel}</p>
+          <span className={`text-3xl font-extrabold tracking-tight ${healthTheme.text}`}>{inventoryHealthPct}%</span>
+          <p className={`text-[10px] font-extrabold mt-1 uppercase ${healthTheme.text}`}>{inventoryHealthLabel}</p>
         </div>
 
       </div>
@@ -320,24 +329,42 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
           <div className="flex items-center justify-around flex-grow gap-4 py-3">
             <div className="relative w-32 h-32 flex-shrink-0">
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="46" stroke="#f8fafc" strokeWidth="1" fill="transparent" />
                 <circle cx="50" cy="50" r="40" stroke="#f1f5f9" strokeWidth="9" fill="transparent" />
-                {riskDonutSegments.map((segment) => (
-                  <circle key={segment.label} cx="50" cy="50" r="40" stroke={segment.color} strokeWidth="9"
-                    strokeDasharray={`${segment.length} ${circumference}`} strokeDashoffset={segment.offset}
-                    strokeLinecap="round" fill="transparent" className="transition-opacity duration-150 hover:opacity-85">
-                    <title>{`${segment.label}: ${segment.value} (${segment.percent}%)`}</title>
-                  </circle>
-                ))}
+                {riskDonutSegments.map((segment) => {
+                  const isHovered = hoveredRisk?.label === segment.label;
+                  return (
+                    <circle key={segment.label} cx="50" cy="50" r="40" stroke={segment.color} strokeWidth={isHovered ? 12 : 9}
+                      strokeDasharray={`${segment.length} ${circumference}`} strokeDashoffset={segment.offset}
+                      strokeLinecap="round" fill="transparent" className="transition-all duration-150 cursor-pointer"
+                      onMouseEnter={() => setHoveredRisk({ label: segment.label, value: segment.value, percent: segment.percent })}
+                      onMouseLeave={() => setHoveredRisk(null)}>
+                      <title>{`${segment.label}: ${segment.value} (${segment.percent}%)`}</title>
+                    </circle>
+                  );
+                })}
               </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-extrabold text-slate-900 leading-none">{totalMasterProducts}</span>
-                <span className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider mt-1">Products</span>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
+                {hoveredRisk ? (
+                  <>
+                    <span className="text-2xl font-extrabold text-slate-900 leading-none transition-all duration-150">{hoveredRisk.value}</span>
+                    <span className="text-[8px] text-slate-400 font-extrabold uppercase tracking-wider mt-1 text-center leading-tight transition-all duration-150 max-w-[80px]">
+                      {hoveredRisk.label} ({hoveredRisk.percent}%)
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-2xl font-extrabold text-slate-900 leading-none">{totalUniqueProducts}</span>
+                    <span className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider mt-1">Products</span>
+                  </>
+                )}
               </div>
             </div>
             <div className="flex flex-col gap-2.5 text-xs font-semibold text-left">
               {riskDonutSegments.map((segment) => (
-                <div key={segment.label} className="flex items-center gap-2 rounded-md px-1.5 py-1 hover:bg-slate-50">
+                <div key={segment.label} className="flex items-center gap-2 rounded-md px-1.5 py-1 hover:bg-slate-50 cursor-pointer"
+                  onMouseEnter={() => setHoveredRisk({ label: segment.label, value: segment.value, percent: segment.percent })}
+                  onMouseLeave={() => setHoveredRisk(null)}
+                >
                   <span className={`w-2.5 h-2.5 rounded-full ${segment.dotClass} flex-shrink-0`} />
                   <div className="flex flex-col text-left">
                     <span className="text-slate-400 text-[9px] font-bold uppercase tracking-wide">{segment.label} ({segment.range})</span>
@@ -358,24 +385,42 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
           <div className="flex items-center justify-around flex-grow gap-4 py-3">
             <div className="relative w-32 h-32 flex-shrink-0">
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="46" stroke="#f8fafc" strokeWidth="1" fill="transparent" />
                 <circle cx="50" cy="50" r="40" stroke="#f1f5f9" strokeWidth="9" fill="transparent" />
-                {fsnDonutSegments.map((segment) => (
-                  <circle key={segment.label} cx="50" cy="50" r="40" stroke={segment.color} strokeWidth="9"
-                    strokeDasharray={`${segment.length} ${circumference}`} strokeDashoffset={segment.offset}
-                    strokeLinecap="round" fill="transparent" className="transition-opacity duration-150 hover:opacity-85">
-                    <title>{`${segment.label}: ${segment.value} (${segment.percent}%)`}</title>
-                  </circle>
-                ))}
+                {fsnDonutSegments.map((segment) => {
+                  const isHovered = hoveredFsn?.label === segment.label;
+                  return (
+                    <circle key={segment.label} cx="50" cy="50" r="40" stroke={segment.color} strokeWidth={isHovered ? 12 : 9}
+                      strokeDasharray={`${segment.length} ${circumference}`} strokeDashoffset={segment.offset}
+                      strokeLinecap="round" fill="transparent" className="transition-all duration-150 cursor-pointer"
+                      onMouseEnter={() => setHoveredFsn({ label: segment.label, value: segment.value, percent: segment.percent })}
+                      onMouseLeave={() => setHoveredFsn(null)}>
+                      <title>{`${segment.label}: ${segment.value} (${segment.percent}%)`}</title>
+                    </circle>
+                  );
+                })}
               </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-extrabold text-slate-900 leading-none">{totalMasterProducts}</span>
-                <span className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider mt-1">Products</span>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
+                {hoveredFsn ? (
+                  <>
+                    <span className="text-2xl font-extrabold text-slate-900 leading-none transition-all duration-150">{hoveredFsn.value}</span>
+                    <span className="text-[8px] text-slate-400 font-extrabold uppercase tracking-wider mt-1 text-center leading-tight transition-all duration-150 max-w-[80px]">
+                      {hoveredFsn.label} ({hoveredFsn.percent}%)
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-2xl font-extrabold text-slate-900 leading-none">{totalUniqueProducts}</span>
+                    <span className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider mt-1">Products</span>
+                  </>
+                )}
               </div>
             </div>
             <div className="flex flex-col gap-2.5 text-xs font-semibold text-left">
               {fsnDonutSegments.map((segment) => (
-                <div key={segment.label} className="flex items-center gap-2 hover:bg-slate-50 px-1.5 py-1 rounded-md">
+                <div key={segment.label} className="flex items-center gap-2 hover:bg-slate-50 px-1.5 py-1 rounded-md cursor-pointer"
+                  onMouseEnter={() => setHoveredFsn({ label: segment.label, value: segment.value, percent: segment.percent })}
+                  onMouseLeave={() => setHoveredFsn(null)}
+                >
                   <span className={`w-2.5 h-2.5 rounded-full ${segment.dotClass} flex-shrink-0`} />
                   <div className="flex flex-col">
                     <span className="text-slate-400 text-[9px] font-bold uppercase tracking-wide">{segment.label}</span>

@@ -21,12 +21,16 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
   const [filterFsn, setFilterFsn] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const [sortField, setSortField] = useState<string>("predictedStockoutDate");
+  const [sortField, setSortField] = useState<string>("none");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   const handleSort = (field: string) => {
     if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else {
+        setSortField("none");
+      }
     } else {
       setSortField(field);
       setSortDirection("asc");
@@ -34,8 +38,8 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
   };
 
   const renderSortIcon = (field: string) => {
-    if (sortField !== field) return <span className="ml-1 text-slate-300">↕</span>;
-    return sortDirection === "asc" ? <span className="ml-1 text-bp-green">▲</span> : <span className="ml-1 text-bp-green">▼</span>;
+    if (sortField !== field) return <span className="text-slate-300">↕</span>;
+    return sortDirection === "asc" ? <span className="text-bp-green">▲</span> : <span className="text-bp-green">▼</span>;
   };
 
   useEffect(() => {
@@ -116,7 +120,7 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
     return true;
   });
 
-  const sortedFilteredInventory = [...filteredInventory].sort((a, b) => {
+  const sortedFilteredInventory = sortField === "none" ? filteredInventory : [...filteredInventory].sort((a, b) => {
     let aVal: any;
     let bVal: any;
 
@@ -208,22 +212,23 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
         <div className="bg-white p-5 rounded-2xl border-t-4 border-t-bp-green border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
           <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Total Products</span>
-          <span className="text-3xl font-extrabold tracking-tight text-slate-900 mt-2">{totalProducts}</span>
+          <span className="text-3xl font-extrabold tracking-tight text-bp-green mt-2">{totalProducts}</span>
+          <p className="text-[9.5px] text-slate-400 font-bold mt-1.5 uppercase tracking-wide">Active catalog items</p>
         </div>
         <div className="bg-white p-5 rounded-2xl border-t-4 border-t-orange-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
           <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Below ROL (PR Needed)</span>
-          <span className="text-3xl font-extrabold tracking-tight text-slate-900 mt-2">{atRiskCount}</span>
-          <p className="text-[9.5px] text-rose-500 font-bold mt-1.5 uppercase tracking-wide">Purchase Requests Required</p>
+          <span className="text-3xl font-extrabold tracking-tight text-orange-500 mt-2">{atRiskCount}</span>
+          <p className="text-[9.5px] text-slate-400 font-bold mt-1.5 uppercase tracking-wide">Purchase requests required</p>
         </div>
         <div className="bg-white p-5 rounded-2xl border-t-4 border-t-rose-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
           <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Stockout in 7 Days</span>
           <span className="text-3xl font-extrabold tracking-tight text-rose-600 mt-2">{stockoutIn7Days}</span>
-          <p className="text-[9.5px] text-rose-500 font-bold mt-1.5 uppercase tracking-wide">Products </p>
+          <p className="text-[9.5px] text-slate-400 font-bold mt-1.5 uppercase tracking-wide">Products at risk</p>
         </div>
         <div className="bg-white p-5 rounded-2xl border-t-4 border-t-rose-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
           <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Overdue Orders</span>
           <span className="text-3xl font-extrabold tracking-tight text-rose-600 mt-2">{overdueOrdersCount}</span>
-          <p className="text-[9.5px] text-rose-500 font-bold mt-1.5 uppercase tracking-wide">Orders Past Deadline</p>
+          <p className="text-[9.5px] text-slate-400 font-bold mt-1.5 uppercase tracking-wide">Orders past deadline</p>
         </div>
       </div>
 
@@ -316,72 +321,108 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
           <table className="w-full text-[11px] text-left">
             <thead className="bg-slate-100 text-slate-700 font-extrabold tracking-wider uppercase border-b border-slate-200 sticky top-0 z-10 text-[9.5px]">
               <tr>
-                <th onClick={() => handleSort("name")} className="py-2.5 px-3.5 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-left w-[220px] min-w-[220px]">
-                  <div className="flex items-center justify-start gap-1">
-                    Product {renderSortIcon("name")}
+                <th onClick={() => handleSort("name")} className="py-2.5 px-3.5 pr-4.5 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-left w-[220px] min-w-[220px] relative">
+                  <div className="flex items-center justify-start pr-2">
+                    <span>Product</span>
+                  </div>
+                  <div className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] pointer-events-none select-none">
+                    {renderSortIcon("name")}
                   </div>
                 </th>
-                <th onClick={() => handleSort("uom")} className="py-2.5 px-2 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    UOM {renderSortIcon("uom")}
+                <th onClick={() => handleSort("uom")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center relative">
+                  <div className="flex items-center justify-center">
+                    <span>UOM</span>
+                  </div>
+                  <div className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] pointer-events-none select-none">
+                    {renderSortIcon("uom")}
                   </div>
                 </th>
-                <th onClick={() => handleSort("currentStock")} className="py-2.5 px-2 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight">
+                <th onClick={() => handleSort("currentStock")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight relative">
                   <div className="flex flex-col items-center justify-center">
-                    <span className="flex items-center gap-0.5">Current {renderSortIcon("currentStock")}</span>
+                    <span>Current</span>
                     <span>Stock</span>
                   </div>
-                </th>
-                <th onClick={() => handleSort("safetyStockLevel")} className="py-2.5 px-2 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight">
-                  <div className="flex flex-col items-center justify-center">
-                    <span className="flex items-center gap-0.5">Safety {renderSortIcon("safetyStockLevel")}</span>
-                    <span>Stock</span>
+                  <div className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] pointer-events-none select-none">
+                    {renderSortIcon("currentStock")}
                   </div>
                 </th>
-                <th onClick={() => handleSort("avgDailyConsumption")} className="py-2.5 px-2 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight">
+                <th onClick={() => handleSort("safetyStockLevel")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight relative">
                   <div className="flex flex-col items-center justify-center">
-                    <span className="flex items-center gap-0.5">Avg Daily {renderSortIcon("avgDailyConsumption")}</span>
+                    <span>Safety</span>
+                    <span>Stock</span>
+                  </div>
+                  <div className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] pointer-events-none select-none">
+                    {renderSortIcon("safetyStockLevel")}
+                  </div>
+                </th>
+                <th onClick={() => handleSort("avgDailyConsumption")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight relative">
+                  <div className="flex flex-col items-center justify-center">
+                    <span>Avg Daily</span>
                     <span>Consumption</span>
                   </div>
+                  <div className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] pointer-events-none select-none">
+                    {renderSortIcon("avgDailyConsumption")}
+                  </div>
                 </th>
-                <th onClick={() => handleSort("predictedStockoutDate")} className="py-2.5 px-2 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight">
+                <th onClick={() => handleSort("predictedStockoutDate")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight relative">
                   <div className="flex flex-col items-center justify-center">
-                    <span className="flex items-center gap-0.5">Stockout {renderSortIcon("predictedStockoutDate")}</span>
+                    <span>Stockout</span>
                     <span>Date</span>
                   </div>
+                  <div className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] pointer-events-none select-none">
+                    {renderSortIcon("predictedStockoutDate")}
+                  </div>
                 </th>
-                <th onClick={() => handleSort("daysLeft")} className="py-2.5 px-2 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight">
+                <th onClick={() => handleSort("daysLeft")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight relative">
                   <div className="flex flex-col items-center justify-center">
-                    <span className="flex items-center gap-0.5">Days {renderSortIcon("daysLeft")}</span>
+                    <span>Days</span>
                     <span>Left</span>
                   </div>
-                </th>
-                <th onClick={() => handleSort("recommendedRoq")} className="py-2.5 px-2 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    ROQ {renderSortIcon("recommendedRoq")}
+                  <div className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] pointer-events-none select-none">
+                    {renderSortIcon("daysLeft")}
                   </div>
                 </th>
-                <th onClick={() => handleSort("leadTimeDays")} className="py-2.5 px-2 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight">
+                <th onClick={() => handleSort("recommendedRoq")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center relative">
+                  <div className="flex items-center justify-center">
+                    <span>ROQ</span>
+                  </div>
+                  <div className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] pointer-events-none select-none">
+                    {renderSortIcon("recommendedRoq")}
+                  </div>
+                </th>
+                <th onClick={() => handleSort("leadTimeDays")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight relative">
                   <div className="flex flex-col items-center justify-center">
-                    <span className="flex items-center gap-0.5">Lead {renderSortIcon("leadTimeDays")}</span>
+                    <span>Lead</span>
                     <span>Time</span>
                   </div>
+                  <div className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] pointer-events-none select-none">
+                    {renderSortIcon("leadTimeDays")}
+                  </div>
                 </th>
-                <th onClick={() => handleSort("orderByDate")} className="py-2.5 px-2 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight">
+                <th onClick={() => handleSort("orderByDate")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight relative">
                   <div className="flex flex-col items-center justify-center">
-                    <span className="flex items-center gap-0.5">Order {renderSortIcon("orderByDate")}</span>
+                    <span>Order</span>
                     <span>By</span>
                   </div>
-                </th>
-                <th onClick={() => handleSort("prMrStatus")} className="py-2.5 px-2 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    Status {renderSortIcon("prMrStatus")}
+                  <div className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] pointer-events-none select-none">
+                    {renderSortIcon("orderByDate")}
                   </div>
                 </th>
-                <th onClick={() => handleSort("riskLevel")} className="py-2.5 px-3 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight">
+                <th onClick={() => handleSort("prMrStatus")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center relative">
+                  <div className="flex items-center justify-center">
+                    <span>Status</span>
+                  </div>
+                  <div className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] pointer-events-none select-none">
+                    {renderSortIcon("prMrStatus")}
+                  </div>
+                </th>
+                <th onClick={() => handleSort("riskLevel")} className="py-2.5 px-3 pr-4 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight relative">
                   <div className="flex flex-col items-center justify-center">
-                    <span className="flex items-center gap-0.5">Risk {renderSortIcon("riskLevel")}</span>
+                    <span>Risk</span>
                     <span>Level</span>
+                  </div>
+                  <div className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] pointer-events-none select-none">
+                    {renderSortIcon("riskLevel")}
                   </div>
                 </th>
               </tr>
