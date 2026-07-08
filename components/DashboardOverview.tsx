@@ -1,276 +1,468 @@
 "use client";
 
 import React from "react";
+import { useData } from "@/context/DataContext";
+import { useAuth } from "@/context/AuthContext";
 
-export default function DashboardOverview() {
+interface DashboardOverviewProps {
+  onNavigate: (tabId: string, subTabId: string, vendorName?: string, productCode?: string) => void;
+}
+
+export default function DashboardOverview({ onNavigate }: DashboardOverviewProps) {
+  const { stores, masterProducts, getStoreInventory, loading } = useData();
+  const { user } = useAuth();
+  const isStoreManager = user?.role === "store manager";
+
+  // Always use actual today (midnight) for all date calculations
+  const TODAY = new Date();
+  TODAY.setHours(0, 0, 0, 0);
+
+  const calcDaysRemaining = (dateStr: string): number => {
+    const parts = dateStr.split("-");
+    if (parts.length !== 3) return 999;
+    const d = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+    return Math.max(0, Math.round((d.getTime() - TODAY.getTime()) / 86400000));
+  };
+
+  const calcRiskLevel = (days: number): "High" | "Medium" | "Low" => {
+    if (days <= 7) return "High";
+    if (days <= 15) return "Medium";
+    return "Low";
+  };
+
+  // Scope stores for store manager
+  const displayStores = isStoreManager && user?.storeId
+    ? stores.filter(s => s.id === user.storeId)
+    : stores;
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-12 bg-white/40 backdrop-blur-md rounded-3xl p-8 border border-slate-200/50">
+        <svg className="animate-spin h-8 w-8 text-bp-green" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+        </svg>
+      </div>
+    );
+  }
+
+  const totalStores = stores.length;
+  const totalMasterProducts = masterProducts.length;
+
+  let overallValuation = 0;
+  let overallAtRisk = 0;
+  let totalSeededSKUsCount = 0;
+  let belowReorderCount = 0;
+  let pendingPrCount = 0;
+  let pendingPrValue = 0;
+  let healthyCount = 0;
+
+  const productAggregates: Record<string, { riskLevel: "High" | "Medium" | "Low"; maxConsumption: number; category: string; daysToStockout: number }> = {};
+  masterProducts.forEach((p) => {
+    productAggregates[p.code] = { riskLevel: "Low", maxConsumption: 0, category: p.category, daysToStockout: 999 };
+  });
+
+  const allItems: Array<{
+    code: string; name: string; uom: string; currentStock: number;
+    predictedStockoutDate: string; daysRemaining: number; leadTimeDays: number;
+    recommendedRoq: number; orderByDate: string; prMrStatus: string;
+    riskLevel: string; category: string;
+  }> = [];
+
+  let overallHighRiskProductCount = 0; // for store manager KPI
+
+  displayStores.forEach((st) => {
+    const inv = getStoreInventory(st.id);
+
+    // Check if this store has any High-risk items (recalculated from actual today)
+    const hasHighRisk = inv.some((item) => calcRiskLevel(calcDaysRemaining(item.predictedStockoutDate)) === "High");
+    if (hasHighRisk) overallAtRisk++;
+
+    inv.forEach((item) => {
+      overallValuation += item.currentStock * item.unitPrice;
+      totalSeededSKUsCount++;
+      if (item.currentStock <= item.rol) belowReorderCount++;
+      if (item.prMrStatus === "PR") {
+        pendingPrCount++;
+        pendingPrValue += item.recommendedRoq * item.unitPrice;
+      }
+
+      // Recalculate days and risk from actual today
+      const daysLeft = calcDaysRemaining(item.predictedStockoutDate);
+      const recalcRisk = calcRiskLevel(daysLeft);
+      if (recalcRisk === "Low") healthyCount++;
+
+      const pInfo = productAggregates[item.code];
+      if (pInfo) {
+        if (item.avgDailyConsumption > pInfo.maxConsumption) pInfo.maxConsumption = item.avgDailyConsumption;
+        // Upgrade risk level using recalculated value (consistent across all charts)
+        if (recalcRisk === "High") pInfo.riskLevel = "High";
+        else if (recalcRisk === "Medium" && pInfo.riskLevel !== "High") pInfo.riskLevel = "Medium";
+        if (daysLeft < pInfo.daysToStockout) pInfo.daysToStockout = daysLeft;
+
+        allItems.push({
+          code: item.code,
+          name: item.name,
+          uom: item.uom,
+          currentStock: item.currentStock,
+          predictedStockoutDate: item.predictedStockoutDate,
+          daysRemaining: daysLeft,
+          leadTimeDays: item.leadTimeDays,
+          recommendedRoq: item.recommendedRoq,
+          orderByDate: item.orderByDate,
+          prMrStatus: item.prMrStatus,
+          riskLevel: recalcRisk, // always use recalculated risk
+          category: item.category,
+        });
+      }
+    });
+  });
+
+  // For store manager: count products (not stores) with High risk
+  if (isStoreManager) {
+    overallHighRiskProductCount = Object.values(productAggregates).filter(p => p.riskLevel === "High").length;
+  }
+
+  const formattedValuation = `$ ${(overallValuation / 1000000).toFixed(2)} M`;
+  const formattedPrValue = `$ ${(pendingPrValue / 1000).toFixed(0)}K`;
+  const inventoryHealthPct = totalSeededSKUsCount > 0 ? Math.round((healthyCount / totalSeededSKUsCount) * 100) : 0;
+  const inventoryHealthLabel = inventoryHealthPct >= 70 ? "Good" : inventoryHealthPct >= 50 ? "Warning" : "Critical";
+  const inventoryHealthColor = inventoryHealthPct >= 70 ? "text-bp-green" : inventoryHealthPct >= 50 ? "text-amber-500" : "text-rose-600";
+  // For store manager: show product count; for others: show store count
+  const criticalStockoutDisplay = isStoreManager ? overallHighRiskProductCount : overallAtRisk;
+  const atRiskPct = isStoreManager
+    ? (totalMasterProducts > 0 ? Math.round((overallHighRiskProductCount / totalMasterProducts) * 100) : 0)
+    : (totalMasterProducts > 0 ? Math.round((overallAtRisk / totalMasterProducts) * 100) : 0);
+  const atRiskLabel = isStoreManager ? "products" : "stores";
+  const belowReorderPct = totalSeededSKUsCount > 0 ? Math.round((belowReorderCount / totalSeededSKUsCount) * 100) : 0;
+
+  const productList = Object.values(productAggregates);
+  const totalUniqueProducts = productList.length || 1;
+  const highRiskProductCount = productList.filter((p) => p.riskLevel === "High").length;
+  const mediumRiskProductCount = productList.filter((p) => p.riskLevel === "Medium").length;
+  const lowRiskProductCount = productList.filter((p) => p.riskLevel === "Low").length;
+  const fastMovingProductCount = productList.filter((p) => p.maxConsumption >= 25.0).length;
+  const slowMovingProductCount = productList.filter((p) => p.maxConsumption >= 5.0 && p.maxConsumption < 25.0).length;
+  const nonMovingProductCount = productList.filter((p) => p.maxConsumption < 5.0).length;
+  const fastPercent = Math.round((fastMovingProductCount / totalUniqueProducts) * 100);
+  const slowPercent = Math.round((slowMovingProductCount / totalUniqueProducts) * 100);
+  const nonPercent = 100 - fastPercent - slowPercent;
+
+  const criticalInlineItems = [...allItems]
+    .filter((item) => item.riskLevel === "High" || item.riskLevel === "Medium")
+    .sort((a, b) => a.daysRemaining - b.daysRemaining)
+    .filter((item, idx, self) => self.findIndex(x => x.code === item.code) === idx)
+    .slice(0, 8);
+
+  const allAtRiskItems: { name: string; code: string; storesCount: number; soonestDate: string; daysRemaining: number; timestamp: number }[] = [];
+  masterProducts.forEach((prod) => {
+    let riskCount = 0;
+    let soonestTimestamp = Infinity;
+    let soonestStr = "N/A";
+    let soonestDays = 999;
+    displayStores.forEach((st) => {
+      const inv = getStoreInventory(st.id);
+      const item = inv.find((p) => p.code === prod.code);
+      if (item) {
+        const daysLeft = calcDaysRemaining(item.predictedStockoutDate);
+        const recalcRisk = calcRiskLevel(daysLeft);
+        if (recalcRisk === "High") {
+          riskCount++;
+          const parts = item.predictedStockoutDate.split("-");
+          if (parts.length === 3) {
+            const t = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])).getTime();
+            if (t < soonestTimestamp) {
+              soonestTimestamp = t;
+              soonestStr = item.predictedStockoutDate;
+              soonestDays = daysLeft;
+            }
+          }
+        }
+      }
+    });
+    if (riskCount > 0) allAtRiskItems.push({ name: prod.name, code: prod.code, storesCount: riskCount, soonestDate: soonestStr, daysRemaining: soonestDays, timestamp: soonestTimestamp });
+  });
+  const topAtRiskProducts = allAtRiskItems.sort((a, b) => a.timestamp - b.timestamp).slice(0, 5);
+
+  const categoryRiskMap: Record<string, { le7: number; eightTo15: number; gt15: number; total: number }> = {};
+  const seenCodes = new Set<string>();
+  Object.entries(productAggregates).forEach(([code, info]) => {
+    if (seenCodes.has(code)) return;
+    seenCodes.add(code);
+    const cat = info.category;
+    if (!categoryRiskMap[cat]) categoryRiskMap[cat] = { le7: 0, eightTo15: 0, gt15: 0, total: 0 };
+    categoryRiskMap[cat].total++;
+    if (info.daysToStockout <= 7) categoryRiskMap[cat].le7++;
+    else if (info.daysToStockout <= 15) categoryRiskMap[cat].eightTo15++;
+    else categoryRiskMap[cat].gt15++;
+  });
+  const categoryRows = Object.entries(categoryRiskMap).map(([name, v]) => ({ name, ...v })).sort((a, b) => b.total - a.total).slice(0, 6);
+  const maxCatTotal = Math.max(...categoryRows.map((c) => c.total), 1);
+
+  const circumference = 251.3;
+  const riskSegments = [
+    { label: "High Risk", range: "<= 7 Days", value: highRiskProductCount, color: "#ef4444", dotClass: "bg-rose-500" },
+    { label: "Medium Risk", range: "8-15 Days", value: mediumRiskProductCount, color: "#f97316", dotClass: "bg-orange-500" },
+    { label: "Low Risk", range: "> 15 Days", value: lowRiskProductCount, color: "#008751", dotClass: "bg-bp-green" }
+  ];
+  let riskOffset = 0;
+  const riskDonutSegments = riskSegments.map((segment) => {
+    const length = (segment.value / totalUniqueProducts) * circumference;
+    const offset = -riskOffset;
+    riskOffset += length;
+    return { ...segment, length, offset, percent: Math.round((segment.value / totalUniqueProducts) * 100) };
+  });
+
+  const fsnSegments = [
+    { label: "Fast Moving", value: fastMovingProductCount, percent: fastPercent, color: "#008751", dotClass: "bg-bp-green" },
+    { label: "Slow Moving", value: slowMovingProductCount, percent: slowPercent, color: "#f97316", dotClass: "bg-orange-500" },
+    { label: "Non Moving", value: nonMovingProductCount, percent: nonPercent, color: "#ef4444", dotClass: "bg-rose-500" }
+  ];
+  let fsnOffset = 0;
+  const fsnDonutSegments = fsnSegments.map((segment) => {
+    const length = (segment.percent / 100) * circumference;
+    const offset = -fsnOffset;
+    fsnOffset += length;
+    return { ...segment, length, offset };
+  });
+
+  const getPrBadgeClass = (status: string) => {
+    if (status === "PR") return "bg-rose-100 text-rose-700 font-bold border border-rose-200";
+    if (status === "MR") return "bg-amber-100 text-amber-700 font-bold border border-amber-200";
+    return "bg-slate-100 text-slate-500 font-medium";
+  };
+
   return (
-    <div className="space-y-6">
-      {/* KPI Section */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-        {/* Card 1 */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center gap-1.5 text-slate-400 mb-1">
-            <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-            <span className="text-[11px] font-bold uppercase tracking-wider">Total Stores</span>
+    <div className="space-y-8 animate-fadeIn">
+
+      {/* KPI Cards */}
+      <div className={`grid gap-5 ${isStoreManager ? "grid-cols-2 lg:grid-cols-5" : "grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"}`}>
+
+        {!isStoreManager && (
+          <div className="bg-white border-t-4 border-t-bp-green border-x border-b border-slate-100 rounded-2xl p-5 shadow-sm card-hover-effect text-left">
+            <div className="flex items-center gap-2 text-slate-400 mb-2">
+              <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center text-bp-green flex-shrink-0">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+              </div>
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Total Stores</span>
+            </div>
+            <span className="text-3xl font-extrabold tracking-tight text-slate-900">{totalStores}</span>
+            <p className="text-[10px] text-slate-400 mt-1 font-medium">Active retail outlets</p>
           </div>
-          <span className="text-2xl font-black text-slate-900">1,500</span>
+        )}
+
+        <div className="bg-white border-t-4 border-t-bp-green border-x border-b border-slate-100 rounded-2xl p-5 shadow-sm card-hover-effect text-left">
+          <div className="flex items-center gap-2 text-slate-400 mb-2">
+            <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center text-bp-green flex-shrink-0">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+            </div>
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Total Products</span>
+          </div>
+          <span className="text-3xl font-extrabold tracking-tight text-slate-900">{totalMasterProducts}</span>
+          <p className="text-[10px] text-slate-400 mt-1 font-medium">Active items</p>
         </div>
 
-        {/* Card 2 */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center gap-1.5 text-slate-400 mb-1">
-            <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
-            <span className="text-[11px] font-bold uppercase tracking-wider">Total Products</span>
+        <div className="bg-white border-t-4 border-t-bp-yellow border-x border-b border-slate-100 rounded-2xl p-5 shadow-sm card-hover-effect text-left">
+          <div className="flex items-center gap-2 text-slate-400 mb-2">
+            <div className="w-7 h-7 rounded-lg bg-yellow-50 flex items-center justify-center text-yellow-600 flex-shrink-0">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M12 16V5" /></svg>
+            </div>
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Inventory Value</span>
           </div>
-          <span className="text-2xl font-black text-slate-900">3,250</span>
+          <span className="text-3xl font-extrabold tracking-tight text-slate-900">{formattedValuation}</span>
+          <p className="text-[10px] text-slate-400 mt-1 font-medium">Stock valuation</p>
         </div>
 
-        {/* Card 3 */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center gap-1.5 text-slate-400 mb-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Total Inventory Value</span>
+        <div className="bg-white border-t-4 border-t-rose-500 border-x border-b border-slate-100 rounded-2xl p-5 shadow-sm card-hover-effect text-left">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-7 h-7 bg-rose-550/10 rounded-lg flex items-center justify-center text-rose-600 flex-shrink-0">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            </div>
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-600">Critical Stockout</span>
           </div>
-          <span className="text-2xl font-black text-slate-900">₹ 45.62 Cr</span>
+          <span className="text-3xl font-extrabold tracking-tight text-rose-600">{criticalStockoutDisplay}</span>
+          <p className="text-[10px] text-slate-400 mt-1 font-medium">{atRiskPct}% of {atRiskLabel} at risk</p>
         </div>
 
-        {/* Card 4 */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center gap-1.5 text-slate-400 mb-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-rose-600">At Risk (7 Days)</span>
+        <div className="bg-white border-t-4 border-t-orange-500 border-x border-b border-slate-100 rounded-2xl p-5 shadow-sm card-hover-effect text-left">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-7 h-7 bg-orange-50 rounded-lg flex items-center justify-center text-orange-500 flex-shrink-0">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>
+            </div>
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-orange-500">Below Reorder</span>
           </div>
-          <span className="text-2xl font-black text-rose-600">128</span>
+          <span className="text-3xl font-extrabold tracking-tight text-orange-550">{belowReorderCount}</span>
+          <p className="text-[10px] text-slate-400 mt-1 font-medium">{belowReorderPct}% SKU reorder limits</p>
         </div>
 
-        {/* Card 5 */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center gap-1.5 text-slate-400 mb-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-bp-green">FSN - Fast Moving</span>
+        <div className="bg-white border-t-4 border-t-emerald-500 border-x border-b border-slate-100 rounded-2xl p-5 shadow-sm card-hover-effect text-left">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-7 h-7 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600 flex-shrink-0">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </div>
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-600">Inventory Health</span>
           </div>
-          <span className="text-2xl font-black text-bp-green">65%</span>
+          <span className={`text-3xl font-extrabold tracking-tight ${inventoryHealthColor}`}>{inventoryHealthPct}%</span>
+          <p className={`text-[10px] font-extrabold mt-1 uppercase ${inventoryHealthColor}`}>{inventoryHealthLabel}</p>
         </div>
 
-        {/* Card 6 */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center gap-1.5 text-slate-400 mb-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-600">Overall Service Level</span>
-          </div>
-          <span className="text-2xl font-black text-indigo-600">92.6%</span>
-        </div>
       </div>
 
-      {/* Charts & Table Section */}
+      {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
         {/* Stockout Risk Summary Donut */}
-        <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
-          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4">Stockout Risk Summary</h3>
-          <div className="flex items-center justify-around flex-grow gap-4">
-            {/* SVG Donut */}
+        <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm card-hover-effect flex flex-col justify-between">
+          <div className="border-b border-slate-50 pb-3.5 mb-4 text-left">
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Stockout Risk Summary</h3>
+            <p className="text-[10px] text-slate-400 font-medium mt-0.5">Stock depletion risk windows</p>
+          </div>
+          <div className="flex items-center justify-around flex-grow gap-4 py-3">
             <div className="relative w-32 h-32 flex-shrink-0">
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="40" stroke="#f1f5f9" strokeWidth="12" fill="transparent" />
-                <circle cx="50" cy="50" r="40" stroke="#008751" strokeWidth="12" strokeDasharray="193.5 251.3" strokeDashoffset="0" fill="transparent" />
-                <circle cx="50" cy="50" r="40" stroke="#f97316" strokeWidth="12" strokeDasharray="37.7 251.3" strokeDashoffset="-193.5" fill="transparent" />
-                <circle cx="50" cy="50" r="40" stroke="#ef4444" strokeWidth="12" strokeDasharray="20.1 251.3" strokeDashoffset="-231.2" fill="transparent" />
+                <circle cx="50" cy="50" r="40" stroke="#f8fafc" strokeWidth="12" fill="transparent" />
+                {riskDonutSegments.map((segment) => (
+                  <circle key={segment.label} cx="50" cy="50" r="40" stroke={segment.color} strokeWidth="12"
+                    strokeDasharray={`${segment.length} ${circumference}`} strokeDashoffset={segment.offset}
+                    strokeLinecap="round" fill="transparent" className="transition-opacity duration-150 hover:opacity-85">
+                    <title>{`${segment.label}: ${segment.value} (${segment.percent}%)`}</title>
+                  </circle>
+                ))}
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-xl font-black text-slate-900">1,500</span>
-                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Stores</span>
+                <span className="text-2xl font-extrabold text-slate-900 leading-none">{totalMasterProducts}</span>
+                <span className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider mt-1">Products</span>
               </div>
             </div>
-
-            <div className="flex flex-col gap-2.5 text-xs font-semibold">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-rose-500 flex-shrink-0" />
-                <div className="flex flex-col">
-                  <span className="text-slate-500 text-[10px]">High Risk (≤ 7 Days)</span>
-                  <span className="text-slate-800">128 <span className="text-[10px] text-slate-400 font-bold">(8%)</span></span>
+            <div className="flex flex-col gap-2.5 text-xs font-semibold text-left">
+              {riskDonutSegments.map((segment) => (
+                <div key={segment.label} className="flex items-center gap-2 rounded-md px-1.5 py-1 hover:bg-slate-50">
+                  <span className={`w-2.5 h-2.5 rounded-full ${segment.dotClass} flex-shrink-0`} />
+                  <div className="flex flex-col text-left">
+                    <span className="text-slate-400 text-[9px] font-bold uppercase tracking-wide">{segment.label} ({segment.range})</span>
+                    <span className="text-slate-800 font-extrabold text-xs">{segment.value} <span className="text-[10px] text-slate-400">({segment.percent}%)</span></span>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-orange-500 flex-shrink-0" />
-                <div className="flex flex-col">
-                  <span className="text-slate-500 text-[10px]">Medium Risk (8-15 Days)</span>
-                  <span className="text-slate-800">226 <span className="text-[10px] text-slate-400 font-bold">(15%)</span></span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-bp-green flex-shrink-0" />
-                <div className="flex flex-col">
-                  <span className="text-slate-500 text-[10px]">Low Risk (&gt; 15 Days)</span>
-                  <span className="text-slate-800">1146 <span className="text-[10px] text-slate-400 font-bold">(77%)</span></span>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* Inventory by FSN Donut */}
-        <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
-          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4">Inventory by FSN</h3>
-          <div className="flex items-center justify-around flex-grow gap-4">
-            {/* SVG Donut */}
+        {/* FSN Summary Donut */}
+        <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm card-hover-effect flex flex-col justify-between">
+          <div className="border-b border-slate-50 pb-3.5 mb-4 text-left">
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">FSN Analysis</h3>
+            <p className="text-[10px] text-slate-400 font-medium mt-0.5">Fast, Slow, Non-moving product splits</p>
+          </div>
+          <div className="flex items-center justify-around flex-grow gap-4 py-3">
             <div className="relative w-32 h-32 flex-shrink-0">
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="40" stroke="#f1f5f9" strokeWidth="12" fill="transparent" />
-                <circle cx="50" cy="50" r="40" stroke="#008751" strokeWidth="12" strokeDasharray="163.3 251.3" strokeDashoffset="0" fill="transparent" />
-                <circle cx="50" cy="50" r="40" stroke="#f97316" strokeWidth="12" strokeDasharray="62.8 251.3" strokeDashoffset="-163.3" fill="transparent" />
-                <circle cx="50" cy="50" r="40" stroke="#ef4444" strokeWidth="12" strokeDasharray="25.1 251.3" strokeDashoffset="-226.1" fill="transparent" />
+                <circle cx="50" cy="50" r="40" stroke="#f8fafc" strokeWidth="12" fill="transparent" />
+                {fsnDonutSegments.map((segment) => (
+                  <circle key={segment.label} cx="50" cy="50" r="40" stroke={segment.color} strokeWidth="12"
+                    strokeDasharray={`${segment.length} ${circumference}`} strokeDashoffset={segment.offset}
+                    strokeLinecap="round" fill="transparent" className="transition-opacity duration-150 hover:opacity-85">
+                    <title>{`${segment.label}: ${segment.value} (${segment.percent}%)`}</title>
+                  </circle>
+                ))}
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-xl font-black text-slate-900">3,250</span>
-                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">SKUs</span>
+                <span className="text-2xl font-extrabold text-slate-900 leading-none">{totalMasterProducts}</span>
+                <span className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider mt-1">Products</span>
               </div>
             </div>
-
-            <div className="flex flex-col gap-3 text-xs font-semibold">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-bp-green flex-shrink-0" />
-                <div className="flex flex-col">
-                  <span className="text-slate-500 text-[10px]">Fast Moving</span>
-                  <span className="text-slate-800">65%</span>
+            <div className="flex flex-col gap-2.5 text-xs font-semibold text-left">
+              {fsnDonutSegments.map((segment) => (
+                <div key={segment.label} className="flex items-center gap-2 hover:bg-slate-50 px-1.5 py-1 rounded-md">
+                  <span className={`w-2.5 h-2.5 rounded-full ${segment.dotClass} flex-shrink-0`} />
+                  <div className="flex flex-col">
+                    <span className="text-slate-400 text-[9px] font-bold uppercase tracking-wide">{segment.label}</span>
+                    <span className="text-slate-800 font-extrabold text-xs">{segment.value} <span className="text-[10px] text-slate-400">({segment.percent}%)</span></span>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-orange-500 flex-shrink-0" />
-                <div className="flex flex-col">
-                  <span className="text-slate-500 text-[10px]">Slow Moving</span>
-                  <span className="text-slate-800">25%</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-rose-500 flex-shrink-0" />
-                <div className="flex flex-col">
-                  <span className="text-slate-500 text-[10px]">Non Moving</span>
-                  <span className="text-slate-800">10%</span>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* Top 5 Products Table */}
-        <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+        {/* Top 5 Products at Risk */}
+        <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm card-hover-effect flex flex-col justify-between">
           <div>
-            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4">Top 5 Products at Risk</h3>
-            <div className="overflow-x-auto">
+            <div className="border-b border-slate-50 pb-3.5 mb-4 text-left">
+              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Top 5 at Risk</h3>
+              <p className="text-[10px] text-slate-400 font-medium mt-0.5">Most urgent stockout predictions</p>
+            </div>
+            <div className="overflow-x-auto scrollbar-thin">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-100 text-slate-400 font-bold uppercase">
-                    <th className="py-2.5">Product</th>
-                    <th className="py-2.5 text-center">Stores at Risk</th>
-                    <th className="py-2.5 text-right">Soonest Stockout</th>
+                  <tr className="border-b border-slate-100 text-slate-400 font-extrabold uppercase text-[9.5px]">
+                    <th className="py-2.5 pr-2">Product</th>
+                    {isStoreManager ? <th className="py-2.5 text-center px-2">Days Left</th> : <th className="py-2.5 text-center px-2">Stores</th>}
+                    <th className="py-2.5 text-right pl-2">Date</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100/60 font-semibold text-slate-700">
-                  <tr>
-                    <td className="py-3 text-slate-900">Lube Oil 15W40</td>
-                    <td className="py-3 text-center text-rose-600">45</td>
-                    <td className="py-3 text-right text-slate-500">03-07-2026</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 text-slate-900">Engine Oil 20W50</td>
-                    <td className="py-3 text-center text-rose-600">32</td>
-                    <td className="py-3 text-right text-slate-500">04-07-2026</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 text-slate-900">Hydraulic Oil 68</td>
-                    <td className="py-3 text-center text-rose-600">18</td>
-                    <td className="py-3 text-right text-slate-500">05-07-2026</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 text-slate-900">Coolant 1L</td>
-                    <td className="py-3 text-center text-rose-500">12</td>
-                    <td className="py-3 text-right text-slate-500">06-07-2026</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 text-slate-900">Brake Fluid DOT 4</td>
-                    <td className="py-3 text-center text-rose-500">10</td>
-                    <td className="py-3 text-right text-slate-500">06-07-2026</td>
-                  </tr>
+                  {topAtRiskProducts.length === 0 ? (
+                    <tr><td colSpan={3} className="py-6 text-center text-slate-400 font-medium">No at-risk products</td></tr>
+                  ) : topAtRiskProducts.map((row, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50/60 transition duration-75 cursor-pointer" onClick={() => onNavigate("2", "store", undefined, row.code)}>
+                      <td className="py-3 pr-2 text-bp-green hover:text-bp-green-dark font-bold text-left truncate max-w-[110px]" title={row.name}>{row.name}</td>
+                      {isStoreManager
+                        ? <td className={`py-3 text-center px-2 font-bold ${row.daysRemaining <= 3 ? "text-rose-600 animate-pulse" : "text-amber-600"}`}>{row.daysRemaining}</td>
+                        : <td className="py-3 text-center px-2 text-rose-600 font-extrabold">{row.storesCount}</td>}
+                      <td className="py-3 text-right pl-2 text-slate-500 font-semibold">{row.soonestDate}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
           </div>
-
           <div className="text-right border-t border-slate-50/80 pt-3">
-            <button className="text-xs font-bold text-bp-green hover:underline hover:text-bp-green-dark">
-              View All
-            </button>
+            <button className="text-xs font-bold text-bp-green hover:text-bp-green-dark transition" onClick={() => onNavigate("2", "store")}>View All Predictions</button>
           </div>
         </div>
+
       </div>
 
-      {/* Bottom Section: Risk by City & Forecast Accuracy */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Bar Chart Mock for Stockout Risk by City */}
-        <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm lg:col-span-2">
-          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-5">Stockout Risk by City</h3>
-          <div className="space-y-4 font-semibold text-xs text-slate-700">
-            <div className="space-y-1.5">
-              <div className="flex justify-between">
-                <span className="text-slate-800">Delhi NCR</span>
-                <span>120 stores at risk</span>
-              </div>
-              <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-bp-green rounded-full" style={{ width: "80%" }} />
-              </div>
-            </div>
+      {/* Stockout Risk by Category */}
+      <div className="grid grid-cols-1 gap-6">
 
-            <div className="space-y-1.5">
-              <div className="flex justify-between">
-                <span className="text-slate-800">Mumbai</span>
-                <span>98 stores at risk</span>
-              </div>
-              <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-bp-green rounded-full" style={{ width: "65%" }} />
-              </div>
+        <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm card-hover-effect">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between border-b border-slate-50 pb-4 mb-5 gap-3">
+            <div className="text-left">
+              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Stockout Risk by Category</h3>
+              <p className="text-[10px] text-slate-400 font-medium mt-0.5">Aggregate stockout levels by department</p>
             </div>
-
-            <div className="space-y-1.5">
-              <div className="flex justify-between">
-                <span className="text-slate-800">Bengaluru</span>
-                <span>75 stores at risk</span>
-              </div>
-              <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-bp-green rounded-full" style={{ width: "50%" }} />
-              </div>
+            <div className="flex flex-wrap items-center gap-4 text-[9.5px] font-extrabold text-slate-500">
+              <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded-sm bg-rose-500 inline-block" />&le; 7 Days</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded-sm bg-amber-400 inline-block" />8-15 Days</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded-sm bg-bp-green inline-block" />&gt; 15 Days</span>
             </div>
-
-            <div className="space-y-1.5">
-              <div className="flex justify-between">
-                <span className="text-slate-800">Chennai</span>
-                <span>60 stores at risk</span>
+          </div>
+          <div className="space-y-4">
+            {categoryRows.map((cat, idx) => (
+              <div key={idx} className="flex items-center gap-4 text-xs">
+                <span className="w-32 text-slate-700 font-bold text-right flex-shrink-0 truncate" title={cat.name}>{cat.name}</span>
+                <div className="flex-grow flex h-6.5 rounded-lg overflow-hidden bg-slate-50 border border-slate-100 p-0.5">
+                  {cat.le7 > 0 && (
+                    <div className="bg-rose-500 flex items-center justify-center text-white font-extrabold text-[9px] rounded-l-md transition duration-150 hover:opacity-90"
+                      style={{ width: `${(cat.le7 / maxCatTotal) * 100}%`, minWidth: "24px" }} title={`≤7 Days: ${cat.le7}`}>{cat.le7}</div>
+                  )}
+                  {cat.eightTo15 > 0 && (
+                    <div className="bg-amber-400 flex items-center justify-center text-white font-extrabold text-[9px] ml-0.5 transition duration-150 hover:opacity-90"
+                      style={{ width: `${(cat.eightTo15 / maxCatTotal) * 100}%`, minWidth: "24px" }} title={`8-15 Days: ${cat.eightTo15}`}>{cat.eightTo15}</div>
+                  )}
+                  {cat.gt15 > 0 && (
+                    <div className="bg-bp-green flex items-center justify-center text-white font-extrabold text-[9px] ml-0.5 rounded-r-md transition duration-150 hover:opacity-90"
+                      style={{ width: `${(cat.gt15 / maxCatTotal) * 100}%`, minWidth: "24px" }} title={`>15 Days: ${cat.gt15}`}>{cat.gt15}</div>
+                  )}
+                </div>
+                <span className="w-8 text-slate-400 font-extrabold text-right flex-shrink-0">{cat.total} <span className="text-[9px] font-normal text-slate-400">SKUs</span></span>
               </div>
-              <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-bp-green rounded-full" style={{ width: "40%" }} />
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
-        {/* Forecast Accuracy Gauge */}
-        <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm flex flex-col justify-between items-center">
-          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-2 self-start w-full">Forecast Accuracy (Overall)</h3>
-          
-          <div className="relative w-36 h-24 flex items-end justify-center overflow-hidden">
-            <svg className="w-36 h-36 absolute top-0" viewBox="0 0 100 100">
-              <path d="M 15 50 A 35 35 0 0 1 85 50" fill="none" stroke="#f1f5f9" strokeWidth="8" strokeLinecap="round" />
-              <path d="M 15 50 A 35 35 0 0 1 85 50" fill="none" stroke="#008751" strokeWidth="8" strokeLinecap="round" strokeDasharray="95.6 109.9" />
-            </svg>
-            <div className="flex flex-col items-center z-10">
-              <span className="text-3xl font-black text-slate-900 leading-none">87%</span>
-              <span className="text-xs text-bp-green font-bold uppercase tracking-wider mt-1">Good</span>
-            </div>
-          </div>
-
-          <div className="text-center text-slate-400 text-[10px] font-bold uppercase tracking-wider mt-4">
-            Calculated against 30-day forecast models
-          </div>
-        </div>
       </div>
     </div>
   );
