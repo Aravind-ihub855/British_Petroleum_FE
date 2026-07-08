@@ -133,19 +133,49 @@ export default function ProductDashboard({ onNavigate }: ProductDashboardProps) 
           </button>
         </div>
         <div className="overflow-x-auto max-h-[450px] scrollbar-thin">
-          <table className="w-full text-xs text-left">
-            <thead className="bg-slate-50/50 text-slate-400 font-extrabold tracking-wider uppercase border-b border-slate-50 sticky top-0 z-10 text-[9.5px]">
+          <table className="w-full text-[11px] text-left">
+            <thead className="bg-slate-100 text-slate-700 font-extrabold tracking-wider uppercase border-b border-slate-200 sticky top-0 z-10 text-[9.5px]">
               <tr>
-                <th className="py-3.5 px-6">Store ID</th>
-                <th className="py-3.5 px-4">Store Name</th>
-                <th className="py-3.5 px-4">City</th>
-                <th className="py-3.5 px-4 text-right">Current Stock</th>
-                <th className="py-3.5 px-4 text-right">Avg Daily</th>
-                <th className="py-3.5 px-4 text-center">Predicted Stockout Date</th>
-                <th className="py-3.5 px-4 text-right">ROQ</th>
-                <th className="py-3.5 px-4 text-center">Order Recommendation</th>
-                <th className="py-3.5 px-4 text-center">PR/MR Status</th>
-                <th className="py-3.5 px-6 text-center">Risk Level</th>
+                <th className="py-2.5 px-3 border-r border-slate-200 text-center">Store ID</th>
+                <th className="py-2.5 px-2 border-r border-slate-200 text-center leading-tight">
+                  <div className="flex flex-col items-center justify-center">
+                    <span>Store</span>
+                    <span>Name</span>
+                  </div>
+                </th>
+                <th className="py-2.5 px-2 border-r border-slate-200 text-center">City</th>
+                <th className="py-2.5 px-2 border-r border-slate-200 text-center leading-tight">
+                  <div className="flex flex-col items-center justify-center">
+                    <span>Current</span>
+                    <span>Stock</span>
+                  </div>
+                </th>
+                <th className="py-2.5 px-2 border-r border-slate-200 text-center leading-tight">
+                  <div className="flex flex-col items-center justify-center">
+                    <span>Avg Daily</span>
+                    <span>Consumption</span>
+                  </div>
+                </th>
+                <th className="py-2.5 px-2 border-r border-slate-200 text-center leading-tight">
+                  <div className="flex flex-col items-center justify-center">
+                    <span>Stockout</span>
+                    <span>Date</span>
+                  </div>
+                </th>
+                <th className="py-2.5 px-2 border-r border-slate-200 text-center">ROQ</th>
+                <th className="py-2.5 px-2 border-r border-slate-200 text-center leading-tight">
+                  <div className="flex flex-col items-center justify-center">
+                    <span>Order</span>
+                    <span>Recommendation</span>
+                  </div>
+                </th>
+                <th className="py-2.5 px-2 border-r border-slate-200 text-center">Status</th>
+                <th className="py-2.5 px-2.5 text-center leading-tight">
+                  <div className="flex flex-col items-center justify-center">
+                    <span>Risk</span>
+                    <span>Level</span>
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100/60 font-semibold text-slate-700">
@@ -153,43 +183,36 @@ export default function ProductDashboard({ onNavigate }: ProductDashboardProps) 
                 const riskColor =
                   row.riskLevel === "High"
                     ? "text-rose-600 bg-rose-50 border-rose-100"
-                    : row.riskLevel === "Medium"
-                    ? "text-amber-600 bg-amber-50 border-amber-100"
-                    : "text-emerald-600 bg-emerald-50 border-emerald-100";
+                    : "text-slate-600 bg-slate-50 border-slate-200";
 
                 return (
                   <tr key={idx} className="hover:bg-slate-50/50 transition duration-75">
-                    <td className="py-4 px-6 font-bold text-bp-green hover:text-bp-green-dark cursor-pointer"
+                    <td className="py-2.5 px-3 font-bold text-slate-800 hover:text-bp-green cursor-pointer border-r border-slate-100 text-center"
                       onClick={() => onNavigate("2", "store", undefined, undefined)}
                     >
                       {row.storeId}
                     </td>
-                    <td className="py-4 px-4 text-slate-900 font-bold">{row.storeName}</td>
-                    <td className="py-4 px-4 text-slate-500 font-medium">{row.city}</td>
-                    <td className="py-4 px-4 text-right text-slate-755 font-normal">{row.currentStock}</td>
-                    <td className="py-4 px-4 text-right text-slate-500 font-medium">{row.avgConsumption}</td>
-                    <td className="py-4 px-4 text-center">
-                      <div className="font-bold text-slate-800">
+                    <td className="py-2.5 px-2 text-slate-700 font-bold border-r border-slate-100 text-center">{row.storeName}</td>
+                    <td className="py-2.5 px-2 text-slate-500 font-medium border-r border-slate-100 text-center">{row.city}</td>
+                    <td className="py-2.5 px-2 text-center text-slate-700 font-normal border-r border-slate-100">{row.currentStock}</td>
+                    <td className="py-2.5 px-2 text-center text-slate-500 font-medium border-r border-slate-100">{row.avgConsumption}</td>
+                    <td className="py-2.5 px-2 text-center border-r border-slate-100">
+                      <div className="font-bold text-slate-800 whitespace-nowrap">
                         {row.predictedStockoutDate}
                       </div>
                     </td>
-                    <td className="py-4 px-4 text-right font-bold text-bp-green">{row.roq}</td>
-                    <td className="py-4 px-4 text-center font-bold text-slate-800">{row.orderByDate}</td>
-                    <td className="py-4 px-4 text-center">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${
-                        row.prMrStatus === "PR" ? "bg-rose-50 text-rose-600 border-rose-100" :
-                        row.prMrStatus === "MR" ? "bg-amber-50 text-amber-600 border-amber-100" :
-                        "bg-slate-50 text-slate-400 border-slate-150"
-                      }`}>
+                    <td className="py-2.5 px-2 text-center font-bold text-slate-800 border-r border-slate-100">{row.roq}</td>
+                    <td className="py-2.5 px-2 text-center font-bold text-slate-800 border-r border-slate-100 whitespace-nowrap">{row.orderByDate}</td>
+                    <td className="py-2.5 px-2 text-center border-r border-slate-100">
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold border bg-slate-50 text-slate-600 border-slate-200">
                         {row.prMrStatus}
                       </span>
                     </td>
-                    <td className="py-4 px-6 text-center">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold border uppercase tracking-wider inline-flex items-center gap-1.5 ${riskColor}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${
+                    <td className="py-2.5 px-2.5 text-center">
+                      <span className={`px-2 py-0.5 rounded-full text-[8.5px] font-extrabold border uppercase tracking-wider inline-flex items-center gap-1 ${riskColor}`}>
+                        <span className={`w-1 h-1 rounded-full ${
                           row.riskLevel === "High" ? "bg-rose-500" :
-                          row.riskLevel === "Medium" ? "bg-amber-500" :
-                          "bg-emerald-500"
+                          "bg-slate-400"
                         }`} />
                         {row.riskLevel}
                       </span>

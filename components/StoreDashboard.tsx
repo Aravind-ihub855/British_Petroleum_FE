@@ -21,6 +21,23 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
   const [filterFsn, setFilterFsn] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
 
+  const [sortField, setSortField] = useState<string>("predictedStockoutDate");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const renderSortIcon = (field: string) => {
+    if (sortField !== field) return <span className="ml-1 text-slate-300">↕</span>;
+    return sortDirection === "asc" ? <span className="ml-1 text-bp-green">▲</span> : <span className="ml-1 text-bp-green">▼</span>;
+  };
+
   useEffect(() => {
     if (isStoreManager && user?.storeId) {
       setSelectedStoreId(user.storeId);
@@ -59,11 +76,6 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
     return "Low";
   };
 
-  // Sort by predicted stockout date ascending (soonest first)
-  const sortedInventory = [...inventory].sort((a, b) => {
-    return calcDays(a.predictedStockoutDate) - calcDays(b.predictedStockoutDate);
-  });
-
   // Calculate dynamic KPIs from the seeded store inventory
   const totalProducts = inventory.length;
   const atRiskCount = inventory.filter((item) => item.prMrStatus === "PR").length;
@@ -87,7 +99,7 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
   const categories = Array.from(new Set(inventory.map((item) => item.category)));
 
   // Filter application
-  const filteredInventory = sortedInventory.filter((item) => {
+  const filteredInventory = inventory.filter((item) => {
     const daysLeft = calcDays(item.predictedStockoutDate);
     const recalcRisk = calcRisk(daysLeft);
     const fsnCat = getFsnCategory(item.avgDailyConsumption);
@@ -102,6 +114,61 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
       if (!nameMatch && !codeMatch) return false;
     }
     return true;
+  });
+
+  const sortedFilteredInventory = [...filteredInventory].sort((a, b) => {
+    let aVal: any;
+    let bVal: any;
+
+    if (sortField === "name") {
+      aVal = a.name;
+      bVal = b.name;
+    } else if (sortField === "uom") {
+      aVal = a.uom;
+      bVal = b.uom;
+    } else if (sortField === "currentStock") {
+      aVal = a.currentStock;
+      bVal = b.currentStock;
+    } else if (sortField === "safetyStockLevel") {
+      aVal = a.safetyStockLevel;
+      bVal = b.safetyStockLevel;
+    } else if (sortField === "avgDailyConsumption") {
+      aVal = a.avgDailyConsumption;
+      bVal = b.avgDailyConsumption;
+    } else if (sortField === "predictedStockoutDate") {
+      aVal = calcDays(a.predictedStockoutDate);
+      bVal = calcDays(b.predictedStockoutDate);
+    } else if (sortField === "daysLeft") {
+      aVal = calcDays(a.predictedStockoutDate);
+      bVal = calcDays(b.predictedStockoutDate);
+    } else if (sortField === "recommendedRoq") {
+      aVal = a.recommendedRoq;
+      bVal = b.recommendedRoq;
+    } else if (sortField === "leadTimeDays") {
+      aVal = a.leadTimeDays;
+      bVal = b.leadTimeDays;
+    } else if (sortField === "orderByDate") {
+      const aParts = a.orderByDate.split("-");
+      const bParts = b.orderByDate.split("-");
+      aVal = aParts.length === 3 ? new Date(parseInt(aParts[2]), parseInt(aParts[1]) - 1, parseInt(aParts[0])).getTime() : 0;
+      bVal = bParts.length === 3 ? new Date(parseInt(bParts[2]), parseInt(bParts[1]) - 1, parseInt(bParts[0])).getTime() : 0;
+    } else if (sortField === "prMrStatus") {
+      aVal = a.prMrStatus;
+      bVal = b.prMrStatus;
+    } else if (sortField === "riskLevel") {
+      const riskRank = { High: 3, Medium: 2, Low: 1 };
+      aVal = riskRank[calcRisk(calcDays(a.predictedStockoutDate))] || 0;
+      bVal = riskRank[calcRisk(calcDays(b.predictedStockoutDate))] || 0;
+    } else {
+      aVal = a.name;
+      bVal = b.name;
+    }
+
+    if (typeof aVal === "string") {
+      return sortDirection === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+    } else {
+      return sortDirection === "asc" ? (aVal - bVal) : (bVal - aVal);
+    }
   });
 
   return (
@@ -159,7 +226,7 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
           <p className="text-[9.5px] text-rose-500 font-bold mt-1.5 uppercase tracking-wide">Orders Past Deadline</p>
         </div>
       </div>
-      
+
       {/* Grid of Interactive Table Filters */}
       <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-wrap gap-4 items-end text-left text-xs font-semibold text-slate-700 card-hover-effect">
         <div className="flex-1 min-w-[150px] space-y-1">
@@ -214,7 +281,7 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-slate-50 border border-slate-200 text-slate-700 py-2 pl-9 pr-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-bp-green transition duration-150 font-semibold shadow-sm"
             />
-            <svg className="w-4 h-4 text-slate-400 absolute left-3 top-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
@@ -244,36 +311,89 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
           <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
             Stockout Prediction - Store Level
           </h3>
-          <p className="text-[10px] text-slate-400 font-medium mt-0.5">Inventory timeline forecasts and automated ordering indicators</p>
         </div>
         <div className="overflow-x-auto max-h-[500px] scrollbar-thin">
-          <table className="w-full text-xs text-left">
-            <thead className="bg-slate-50/50 text-slate-400 font-extrabold tracking-wider uppercase border-b border-slate-50 sticky top-0 z-10 text-[9.5px]">
+          <table className="w-full text-[11px] text-left">
+            <thead className="bg-slate-100 text-slate-700 font-extrabold tracking-wider uppercase border-b border-slate-200 sticky top-0 z-10 text-[9.5px]">
               <tr>
-                <th className="py-3.5 px-6">Product</th>
-                <th className="py-3.5 px-4 text-center">UOM</th>
-                <th className="py-3.5 px-4 text-right">Current Stock</th>
-                <th className="py-3.5 px-4 text-right">Safety Stock</th>
-                <th className="py-3.5 px-4 text-right">Avg Daily Consumption</th>
-                <th className="py-3.5 px-4 text-center">Stockout Date</th>
-                <th className="py-3.5 px-4 text-center">Days Left</th>
-                <th className="py-3.5 px-4 text-right">ROQ</th>
-                <th className="py-3.5 px-4 text-center">Lead Time</th>
-                <th className="py-3.5 px-4 text-center">Order By</th>
-                <th className="py-3.5 px-4 text-center">Status</th>
-                <th className="py-3.5 px-6 text-center">Risk Level</th>
+                <th onClick={() => handleSort("name")} className="py-2.5 px-3.5 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-left w-[220px] min-w-[220px]">
+                  <div className="flex items-center justify-start gap-1">
+                    Product {renderSortIcon("name")}
+                  </div>
+                </th>
+                <th onClick={() => handleSort("uom")} className="py-2.5 px-2 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center">
+                  <div className="flex items-center justify-center gap-1">
+                    UOM {renderSortIcon("uom")}
+                  </div>
+                </th>
+                <th onClick={() => handleSort("currentStock")} className="py-2.5 px-2 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight">
+                  <div className="flex flex-col items-center justify-center">
+                    <span className="flex items-center gap-0.5">Current {renderSortIcon("currentStock")}</span>
+                    <span>Stock</span>
+                  </div>
+                </th>
+                <th onClick={() => handleSort("safetyStockLevel")} className="py-2.5 px-2 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight">
+                  <div className="flex flex-col items-center justify-center">
+                    <span className="flex items-center gap-0.5">Safety {renderSortIcon("safetyStockLevel")}</span>
+                    <span>Stock</span>
+                  </div>
+                </th>
+                <th onClick={() => handleSort("avgDailyConsumption")} className="py-2.5 px-2 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight">
+                  <div className="flex flex-col items-center justify-center">
+                    <span className="flex items-center gap-0.5">Avg Daily {renderSortIcon("avgDailyConsumption")}</span>
+                    <span>Consumption</span>
+                  </div>
+                </th>
+                <th onClick={() => handleSort("predictedStockoutDate")} className="py-2.5 px-2 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight">
+                  <div className="flex flex-col items-center justify-center">
+                    <span className="flex items-center gap-0.5">Stockout {renderSortIcon("predictedStockoutDate")}</span>
+                    <span>Date</span>
+                  </div>
+                </th>
+                <th onClick={() => handleSort("daysLeft")} className="py-2.5 px-2 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight">
+                  <div className="flex flex-col items-center justify-center">
+                    <span className="flex items-center gap-0.5">Days {renderSortIcon("daysLeft")}</span>
+                    <span>Left</span>
+                  </div>
+                </th>
+                <th onClick={() => handleSort("recommendedRoq")} className="py-2.5 px-2 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center">
+                  <div className="flex items-center justify-center gap-1">
+                    ROQ {renderSortIcon("recommendedRoq")}
+                  </div>
+                </th>
+                <th onClick={() => handleSort("leadTimeDays")} className="py-2.5 px-2 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight">
+                  <div className="flex flex-col items-center justify-center">
+                    <span className="flex items-center gap-0.5">Lead {renderSortIcon("leadTimeDays")}</span>
+                    <span>Time</span>
+                  </div>
+                </th>
+                <th onClick={() => handleSort("orderByDate")} className="py-2.5 px-2 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight">
+                  <div className="flex flex-col items-center justify-center">
+                    <span className="flex items-center gap-0.5">Order {renderSortIcon("orderByDate")}</span>
+                    <span>By</span>
+                  </div>
+                </th>
+                <th onClick={() => handleSort("prMrStatus")} className="py-2.5 px-2 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center">
+                  <div className="flex items-center justify-center gap-1">
+                    Status {renderSortIcon("prMrStatus")}
+                  </div>
+                </th>
+                <th onClick={() => handleSort("riskLevel")} className="py-2.5 px-3 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight">
+                  <div className="flex flex-col items-center justify-center">
+                    <span className="flex items-center gap-0.5">Risk {renderSortIcon("riskLevel")}</span>
+                    <span>Level</span>
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100/60 font-semibold text-slate-700">
-              {filteredInventory.map((row, idx) => {
+               {sortedFilteredInventory.map((row, idx) => {
                 const daysLeft = calcDays(row.predictedStockoutDate);
                 const recalcRisk = calcRisk(daysLeft);
                 const riskColor =
                   recalcRisk === "High"
                     ? "text-rose-600 bg-rose-50 border-rose-100"
-                    : recalcRisk === "Medium"
-                    ? "text-amber-600 bg-amber-50 border-amber-100"
-                    : "text-emerald-600 bg-emerald-50 border-emerald-100";
+                    : "text-slate-600 bg-slate-50 border-slate-200";
 
                 // Order by date urgency using actual today
                 const orderParts = row.orderByDate.split("-");
@@ -286,21 +406,19 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
 
                 return (
                   <tr key={idx} className="hover:bg-slate-50/50 transition duration-75">
-                    <td className="py-4 px-6 font-bold text-bp-green hover:text-bp-green-dark cursor-pointer"
+                    <td className="py-2.5 px-3.5 border-r border-slate-100 text-left w-[220px] min-w-[220px]"
                       onClick={() => onNavigate("3", "product_wise", undefined, row.code)}
                     >
-                      {row.name}
+                      <div className="leading-tight font-bold text-slate-800 hover:text-bp-green cursor-pointer max-w-[220px]">
+                        {row.name}
+                      </div>
                     </td>
-                    <td className="py-4 px-4 text-center text-slate-400 font-medium">{row.uom}</td>
-                    <td className="py-4 px-4 text-right text-slate-655 font-normal">{row.currentStock}</td>
-                    <td className="py-4 px-4 text-right text-slate-500 font-medium">{row.safetyStockLevel}</td>
-                    <td className="py-4 px-4 text-right text-slate-500 font-medium">{row.avgDailyConsumption}</td>
-                    <td className="py-4 px-4 text-center">
-                      <div className={`font-bold ${
-                        daysLeft <= 3 ? "text-rose-600" :
-                        daysLeft <= 7 ? "text-amber-600" :
-                        "text-slate-800"
-                      }`}>
+                    <td className="py-2.5 px-2 text-center text-slate-400 font-medium border-r border-slate-100">{row.uom}</td>
+                    <td className="py-2.5 px-2 text-center text-slate-700 font-normal border-r border-slate-100">{row.currentStock}</td>
+                    <td className="py-2.5 px-2 text-center text-slate-500 font-medium border-r border-slate-100">{row.safetyStockLevel}</td>
+                    <td className="py-2.5 px-2 text-center text-slate-500 font-medium border-r border-slate-100">{row.avgDailyConsumption}</td>
+                    <td className="py-2.5 px-2 text-center border-r border-slate-100">
+                      <div className="font-bold text-slate-800 whitespace-nowrap">
                         {(() => {
                           const parts = row.predictedStockoutDate.split("-");
                           if (parts.length !== 3) return row.predictedStockoutDate;
@@ -309,25 +427,20 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
                           return `${parts[0]} ${mName} ${parts[2]}`;
                         })()}
                       </div>
-                      <div className="text-[10px] text-slate-400 font-medium mt-0.5">
+                      <div className="text-[9px] text-slate-400 font-medium mt-0.5 animate-none whitespace-nowrap">
                         ({daysLeft} {daysLeft === 1 ? "day" : "days"} left)
                       </div>
                     </td>
-                    <td className="py-4 px-4 text-center">
-                      <span className={`font-extrabold text-sm ${
-                        daysLeft <= 3 ? "text-rose-600" :
-                        daysLeft <= 7 ? "text-amber-600" :
-                        daysLeft <= 15 ? "text-slate-700" :
-                        "text-emerald-600"
-                      }`}>{daysLeft}</span>
+                    <td className="py-2.5 px-2 text-center border-r border-slate-100">
+                      <span className="font-extrabold text-sm text-slate-800">{daysLeft}</span>
                     </td>
-                    <td className="py-4 px-4 text-right font-bold text-bp-green">{row.recommendedRoq}</td>
-                    <td className="py-4 px-4 text-center text-slate-500 font-medium">
+                    <td className="py-2.5 px-2 text-center font-bold text-slate-800 border-r border-slate-100">{row.recommendedRoq}</td>
+                    <td className="py-2.5 px-2 text-center text-slate-500 font-medium border-r border-slate-100">
                       {row.leadTimeDays} {row.leadTimeDays === 1 ? "day" : "days"}
                     </td>
-                    <td className="py-4 px-4 text-center">
-                      <div className="flex flex-col items-center">
-                        <div className={`font-bold ${isOverdue ? "text-rose-600" : isToday ? "text-amber-600" : "text-slate-800"}`}>
+                    <td className="py-2.5 px-2 text-center border-r border-slate-100">
+                      <div className="flex flex-col items-center justify-center">
+                        <div className="font-bold text-slate-800 whitespace-nowrap">
                           {(() => {
                             const parts = row.orderByDate.split("-");
                             if (parts.length !== 3) return row.orderByDate;
@@ -336,7 +449,7 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
                             return `${parts[0]} ${mName} ${parts[2]}`;
                           })()}
                         </div>
-                        <div className="text-[10px] mt-0.5">
+                        <div className="text-[8.5px] mt-0.5 whitespace-nowrap">
                           {isOverdue ? (
                             <span className="text-rose-600 font-bold uppercase tracking-wide">Overdue</span>
                           ) : (
@@ -345,21 +458,16 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
                         </div>
                       </div>
                     </td>
-                    <td className="py-4 px-4 text-center">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${
-                        row.prMrStatus === "PR" ? "bg-rose-50 text-rose-600 border-rose-100" :
-                        row.prMrStatus === "MR" ? "bg-amber-50 text-amber-600 border-amber-100" :
-                        "bg-slate-50 text-slate-400 border-slate-150"
-                      }`}>
+                    <td className="py-2.5 px-2 text-center border-r border-slate-100">
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold border bg-slate-50 text-slate-600 border-slate-200">
                         {row.prMrStatus}
                       </span>
                     </td>
-                    <td className="py-4 px-5 text-center">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold border uppercase tracking-wider inline-flex items-center gap-1.5 ${riskColor}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${
+                    <td className="py-2.5 px-2 text-center">
+                      <span className={`px-2 py-0.5 rounded-full text-[8.5px] font-extrabold border uppercase tracking-wider inline-flex items-center gap-1 ${riskColor}`}>
+                        <span className={`w-1 h-1 rounded-full ${
                           recalcRisk === "High" ? "bg-rose-500" :
-                          recalcRisk === "Medium" ? "bg-amber-500" :
-                          "bg-emerald-500"
+                          "bg-slate-400"
                         }`} />
                         {recalcRisk}
                       </span>

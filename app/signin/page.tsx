@@ -65,7 +65,7 @@ export default function SignIn() {
               Sign in to BP
             </h1>
             <p className="text-slate-500 text-sm mt-1.5 font-medium">
-              Access your demand forecasting workspace
+              Access your workspace
             </p>
           </div>
 

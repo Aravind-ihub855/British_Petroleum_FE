@@ -175,38 +175,61 @@ export default function VendorPerformance({
                 <p className="text-[10px] text-slate-400 font-semibold mt-0.5 leading-snug">Summary score ratings of qualified convenience store suppliers</p>
               </div>
               <div className="overflow-x-auto max-h-[500px] scrollbar-thin">
-                <table className="w-full text-xs text-left">
-                  <thead className="bg-slate-50/50 text-slate-400 font-extrabold tracking-wider uppercase border-b border-slate-50 sticky top-0 z-10 text-[9.5px]">
+                <table className="w-full text-[11px] text-left">
+                  <thead className="bg-slate-100 text-slate-700 font-extrabold tracking-wider uppercase border-b border-slate-200 sticky top-0 z-10 text-[9.5px]">
                     <tr>
-                      <th className="py-4 px-6">Vendor</th>
-                      <th className="py-4 px-6">Product Category Group</th>
-                      <th className="py-4 px-6 text-center">Cost Compliance</th>
-                      <th className="py-4 px-6 text-center">Quality Score</th>
-                      <th className="py-4 px-6 text-center">Avg Lead Time</th>
-                      <th className="py-4 px-6 text-center">Overall Score</th>
+                      <th className="py-2.5 px-3 border-r border-slate-200 text-left w-[220px] min-w-[220px]">Vendor</th>
+                      <th className="py-2.5 px-2 border-r border-slate-200 text-center leading-tight">
+                        <div className="flex flex-col items-center justify-center">
+                          <span>Product Category</span>
+                          <span>Group</span>
+                        </div>
+                      </th>
+                      <th className="py-2.5 px-2 border-r border-slate-200 text-center leading-tight">
+                        <div className="flex flex-col items-center justify-center">
+                          <span>Cost</span>
+                          <span>Compliance</span>
+                        </div>
+                      </th>
+                      <th className="py-2.5 px-2 border-r border-slate-200 text-center leading-tight">
+                        <div className="flex flex-col items-center justify-center">
+                          <span>Quality</span>
+                          <span>Score</span>
+                        </div>
+                      </th>
+                      <th className="py-2.5 px-2 border-r border-slate-200 text-center leading-tight">
+                        <div className="flex flex-col items-center justify-center">
+                          <span>Avg Lead</span>
+                          <span>Time</span>
+                        </div>
+                      </th>
+                      <th className="py-2.5 px-2 text-center leading-tight">
+                        <div className="flex flex-col items-center justify-center">
+                          <span>Overall</span>
+                          <span>Score</span>
+                        </div>
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100/60 font-semibold text-slate-700">
                     {performanceLogs.map((row, idx) => (
                       <tr key={idx} className="hover:bg-slate-50/50 transition duration-75">
-                        <td className="py-4 px-6 font-bold text-bp-green cursor-pointer hover:text-bp-green-dark"
+                        <td className="py-2.5 px-3 font-bold text-slate-800 hover:text-bp-green cursor-pointer border-r border-slate-100 text-left w-[220px] min-w-[220px]"
                           onClick={() => {
                             setSelectedVendorName(row.vendor);
                             setSubTab("vendor_wise");
                           }}
                         >
-                          {row.vendor}
+                          <div className="leading-tight max-w-[220px]">
+                            {row.vendor}
+                          </div>
                         </td>
-                        <td className="py-4 px-6 text-slate-500 font-medium">{row.product}</td>
-                        <td className="py-4 px-6 text-center text-slate-655 font-normal">{row.costScore}</td>
-                        <td className="py-4 px-6 text-center text-slate-655 font-normal">{row.qualityScore}</td>
-                        <td className="py-4 px-6 text-center font-normal text-slate-700">{row.deliveryTime}</td>
-                        <td className="py-4 px-6 text-center">
-                          <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10.5px] border ${
-                            row.overallScore >= 9.0 ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
-                            row.overallScore >= 8.5 ? "bg-amber-50 text-amber-600 border-amber-100" :
-                            "bg-slate-50 text-slate-400 border-slate-150"
-                          }`}>
+                        <td className="py-2.5 px-2 text-slate-500 font-medium border-r border-slate-100 text-center">{row.product}</td>
+                        <td className="py-2.5 px-2 text-center text-slate-700 font-normal border-r border-slate-100">{row.costScore}</td>
+                        <td className="py-2.5 px-2 text-center text-slate-700 font-normal border-r border-slate-100">{row.qualityScore}</td>
+                        <td className="py-2.5 px-2 text-center font-normal text-slate-700 border-r border-slate-100">{row.deliveryTime}</td>
+                        <td className="py-2.5 px-2 text-center">
+                          <span className="px-2 py-0.5 rounded-full font-bold text-[9px] border bg-slate-50 text-slate-600 border-slate-200">
                             {row.overallScore} / 10
                           </span>
                         </td>
@@ -359,23 +382,58 @@ export default function VendorPerformance({
               </div>
             </div>
             <div className="overflow-x-auto max-h-[500px] scrollbar-thin">
-              <table className="w-full text-xs text-left">
-                <thead className="bg-slate-50/50 text-slate-400 font-extrabold tracking-wider uppercase border-b border-slate-50 sticky top-0 z-10 text-[9.5px]">
+              <table className="w-full text-[11px] text-left">
+                <thead className="bg-slate-100 text-slate-700 font-extrabold tracking-wider uppercase border-b border-slate-200 sticky top-0 z-10 text-[9.5px]">
                   <tr>
-                    <th className="py-4 px-6">Product</th>
-                    <th className="py-4 px-4 text-center">UOM</th>
-                    <th className="py-4 px-4 text-center">Category</th>
-                    <th className="py-4 px-4 text-right">Unit Cost</th>
-                    <th className="py-4 px-4 text-center">vs Market</th>
-                    <th className="py-4 px-4 text-center">Lead Time</th>
-                    <th className="py-4 px-4 text-center">On-Time</th>
-                    <th className="py-4 px-4 text-center">Rejection</th>
-                    <th className="py-4 px-4 text-center">Sole Source</th>
-                    <th className="py-4 px-4 text-center">FSN Class</th>
-                    <th className="py-4 px-6 text-center">Overall Score</th>
+                    <th className="py-2.5 px-3.5 border-r border-slate-200 text-left w-[220px] min-w-[220px]">Product</th>
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center">UOM</th>
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center">Category</th>
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight">
+                      <div className="flex flex-col items-center justify-center">
+                        <span>Unit</span>
+                        <span>Cost</span>
+                      </div>
+                    </th>
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight">
+                      <div className="flex flex-col items-center justify-center">
+                        <span>vs</span>
+                        <span>Market</span>
+                      </div>
+                    </th>
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight">
+                      <div className="flex flex-col items-center justify-center">
+                        <span>Lead</span>
+                        <span>Time</span>
+                      </div>
+                    </th>
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight">
+                      <div className="flex flex-col items-center justify-center">
+                        <span>On-</span>
+                        <span>Time</span>
+                      </div>
+                    </th>
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center">Rejection</th>
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight">
+                      <div className="flex flex-col items-center justify-center">
+                        <span>Sole</span>
+                        <span>Source</span>
+                      </div>
+                    </th>
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight">
+                      <div className="flex flex-col items-center justify-center">
+                        <span>FSN</span>
+                        <span>Class</span>
+                      </div>
+                    </th>
+                    <th className="py-2.5 px-2 text-center leading-tight">
+                      <div className="flex flex-col items-center justify-center">
+                        <span>Overall</span>
+                        <span>Score</span>
+                      </div>
+                    </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 font-medium text-slate-600">
+                <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
                   {vendorProducts.map((row, idx) => {
                     const activeProd = masterProducts.find(m => m.code === row.productCode);
                     const marketPrice = activeProd ? activeProd.unitPrice : row.unitCost;
@@ -384,39 +442,39 @@ export default function VendorPerformance({
                     
                     return (
                     <tr key={idx} className="hover:bg-slate-50/40 transition duration-75">
-                      <td className="py-4.5 px-6 font-semibold text-bp-green cursor-pointer hover:underline"
+                      <td className="py-2.5 px-3.5 border-r border-slate-100 text-left w-[220px] min-w-[220px] font-bold text-slate-800 hover:text-bp-green cursor-pointer"
                         onClick={() => {
                           setSelectedProductCode(row.productCode);
                           setSubTab("product_wise");
                         }}
                       >
-                        {row.productName}
+                        <div className="leading-tight max-w-[220px]">
+                          {row.productName}
+                        </div>
                       </td>
-                      <td className="py-4.5 px-4 text-center text-slate-400">{row.uom}</td>
-                      <td className="py-4.5 px-4 text-center text-slate-400">{row.category}</td>
-                      <td className="py-4.5 px-4 text-right font-normal text-slate-700">${row.unitCost.toFixed(2)}</td>
-                      <td className="py-4.5 px-4 text-center font-normal">
+                      <td className="py-2.5 px-1.5 text-center text-slate-400 border-r border-slate-100">{row.uom}</td>
+                      <td className="py-2.5 px-1.5 text-center text-slate-400 border-r border-slate-100">{row.category}</td>
+                      <td className="py-2.5 px-1.5 text-center font-normal text-slate-700 border-r border-slate-100">${row.unitCost.toFixed(2)}</td>
+                      <td className="py-2.5 px-1.5 text-center font-normal border-r border-slate-100">
                         {priceDiff > 0 ? (
-                          <span className="text-rose-600 font-bold">+${priceDiff.toFixed(2)} (+{priceDiffPct}%)</span>
+                          <span className="text-slate-800 font-bold">+${priceDiff.toFixed(2)} (+{priceDiffPct}%)</span>
                         ) : priceDiff < 0 ? (
-                          <span className="text-emerald-600 font-bold">-${Math.abs(priceDiff).toFixed(2)} ({priceDiffPct}%)</span>
+                          <span className="text-slate-700 font-bold">-${Math.abs(priceDiff).toFixed(2)} ({priceDiffPct}%)</span>
                         ) : (
                           <span className="text-slate-400">-</span>
                         )}
                       </td>
-                      <td className="py-4.5 px-4 text-center text-slate-500 font-medium">{row.deliveryTime}d</td>
-                      <td className="py-4.5 px-4 text-center text-slate-700">{row.onTimePercent}%</td>
-                      <td className="py-4.5 px-4 text-center text-rose-600">{row.rejectionRate}%</td>
-                      <td className="py-4.5 px-4 text-center">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${row.isSoleSource ? "bg-rose-50 text-rose-600 border-rose-100" : "bg-slate-50 text-slate-400 border-slate-150"}`}>
+                      <td className="py-2.5 px-1.5 text-center text-slate-500 font-medium border-r border-slate-100">{row.deliveryTime}d</td>
+                      <td className="py-2.5 px-1.5 text-center text-slate-700 border-r border-slate-100">{row.onTimePercent}%</td>
+                      <td className="py-2.5 px-1.5 text-center text-slate-700 border-r border-slate-100">{row.rejectionRate}%</td>
+                      <td className="py-2.5 px-1.5 text-center border-r border-slate-100">
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${row.isSoleSource ? "bg-rose-50 text-rose-600 border-rose-100" : "bg-slate-50 text-slate-600 border-slate-200"}`}>
                           {row.isSoleSource ? "Yes" : "No"}
                         </span>
                       </td>
-                      <td className="py-4.5 px-4 text-center">
+                      <td className="py-2.5 px-1.5 text-center border-r border-slate-100">
                         {(() => {
                           const fsn = getProductFsnClass(row.productCode);
-                          const fsnStyle =
-                            fsn === "Fast" ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
                             fsn === "Slow" ? "bg-amber-50 text-amber-600 border-amber-100" :
                             "bg-rose-50 text-rose-600 border-rose-100";
                           return (
@@ -570,19 +628,54 @@ export default function VendorPerformance({
               <p className="text-[10px] text-slate-400 font-medium mt-0.5">Overview scores and base unit prices of qualified vendor networks</p>
             </div>
             <div className="overflow-x-auto scrollbar-thin">
-              <table className="w-full text-xs text-left">
-                <thead className="bg-slate-50/50 text-slate-400 font-extrabold tracking-wider uppercase border-b border-slate-50 text-[9.5px]">
+              <table className="w-full text-[11px] text-left">
+                <thead className="bg-slate-100 text-slate-700 font-extrabold tracking-wider uppercase border-b border-slate-200 text-[9.5px]">
                   <tr>
-                    <th className="py-4 px-6">Vendor</th>
-                    <th className="py-4 px-4">Vendor Type</th>
-                    <th className="py-4 px-4">Region</th>
-                    <th className="py-4 px-4 text-right">PO Cost</th>
-                    <th className="py-4 px-4 text-center">vs Market</th>
-                    <th className="py-4 px-4 text-center">Lead Time</th>
-                    <th className="py-4 px-4 text-center">On-Time %</th>
-                    <th className="py-4 px-4 text-center">Rejection %</th>
-                    <th className="py-4 px-4 text-right">MOQ</th>
-                    <th className="py-4 px-6 text-center">Overall Score</th>
+                    <th className="py-2.5 px-3.5 border-r border-slate-200 text-left w-[220px] min-w-[220px]">Vendor</th>
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight">
+                      <div className="flex flex-col items-center justify-center">
+                        <span>Vendor</span>
+                        <span>Type</span>
+                      </div>
+                    </th>
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center">Region</th>
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight">
+                      <div className="flex flex-col items-center justify-center">
+                        <span>PO</span>
+                        <span>Cost</span>
+                      </div>
+                    </th>
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight">
+                      <div className="flex flex-col items-center justify-center">
+                        <span>vs</span>
+                        <span>Market</span>
+                      </div>
+                    </th>
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight">
+                      <div className="flex flex-col items-center justify-center">
+                        <span>Lead</span>
+                        <span>Time</span>
+                      </div>
+                    </th>
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight">
+                      <div className="flex flex-col items-center justify-center">
+                        <span>On-</span>
+                        <span>Time %</span>
+                      </div>
+                    </th>
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight">
+                      <div className="flex flex-col items-center justify-center">
+                        <span>Rejection</span>
+                        <span>%</span>
+                      </div>
+                    </th>
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center">MOQ</th>
+                    <th className="py-2.5 px-2 text-center leading-tight">
+                      <div className="flex flex-col items-center justify-center">
+                        <span>Overall</span>
+                        <span>Score</span>
+                      </div>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100/60 font-semibold text-slate-700">
@@ -592,36 +685,34 @@ export default function VendorPerformance({
 
                     return (
                       <tr key={idx} className="hover:bg-slate-50/50 transition duration-75">
-                        <td className="py-4.5 px-6 font-bold text-bp-green cursor-pointer hover:text-bp-green-dark"
+                        <td className="py-2.5 px-3.5 border-r border-slate-100 text-left w-[220px] min-w-[220px] font-bold text-slate-800 hover:text-bp-green cursor-pointer"
                           onClick={() => {
                             setSelectedVendorName(row.vendorName);
                             setSubTab("vendor_wise");
                           }}
                         >
-                          {row.vendorName}
+                          <div className="leading-tight max-w-[220px]">
+                            {row.vendorName}
+                          </div>
                         </td>
-                        <td className="py-4.5 px-4 text-slate-500 font-medium">{row.vendorType}</td>
-                        <td className="py-4.5 px-4 text-slate-500 font-medium">{row.vendorRegion}</td>
-                        <td className="py-4.5 px-4 text-right text-slate-900">${row.unitCost.toFixed(2)}</td>
-                        <td className="py-4.5 px-4 text-center">
+                        <td className="py-2.5 px-1.5 text-slate-500 font-medium border-r border-slate-100 text-center">{row.vendorType}</td>
+                        <td className="py-2.5 px-1.5 text-slate-500 font-medium border-r border-slate-100 text-center">{row.vendorRegion}</td>
+                        <td className="py-2.5 px-1.5 text-center text-slate-900 border-r border-slate-100">${row.unitCost.toFixed(2)}</td>
+                        <td className="py-2.5 px-1.5 text-center border-r border-slate-100">
                           {priceDiff > 0 ? (
-                            <span className="text-rose-600 font-bold bg-rose-50 px-2 py-0.5 rounded-full border border-rose-100/80 text-[10px]">+${priceDiff.toFixed(2)} (+{priceDiffPct}%)</span>
+                            <span className="text-slate-800 font-bold bg-slate-50 px-2 py-0.5 rounded-full border border-slate-200 text-[9px]">+${priceDiff.toFixed(2)} (+{priceDiffPct}%)</span>
                           ) : priceDiff < 0 ? (
-                            <span className="text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100/80 text-[10px]">-${Math.abs(priceDiff).toFixed(2)} ({priceDiffPct}%)</span>
+                            <span className="text-slate-700 font-bold bg-slate-50 px-2 py-0.5 rounded-full border border-slate-200 text-[9px]">-${Math.abs(priceDiff).toFixed(2)} ({priceDiffPct}%)</span>
                           ) : (
                             <span className="text-slate-400 font-bold">-</span>
                           )}
                         </td>
-                        <td className="py-4.5 px-4 text-center text-slate-500 font-medium">{row.deliveryTime}</td>
-                        <td className="py-4.5 px-4 text-center text-slate-700">{row.onTimePercent}%</td>
-                        <td className="py-4.5 px-4 text-center text-rose-600">{row.rejectionRate}%</td>
-                        <td className="py-4.5 px-4 text-right text-slate-700">{row.moq} units</td>
-                        <td className="py-4.5 px-6 text-center">
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                            row.overallScore >= 9.0 ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
-                            row.overallScore >= 8.5 ? "bg-amber-50 text-amber-600 border-amber-100" :
-                            "bg-slate-50 text-slate-400 border-slate-150"
-                          }`}>
+                        <td className="py-2.5 px-1.5 text-center text-slate-500 font-medium border-r border-slate-100">{row.deliveryTime}</td>
+                        <td className="py-2.5 px-1.5 text-center text-slate-700 border-r border-slate-100">{row.onTimePercent}%</td>
+                        <td className="py-2.5 px-1.5 text-center text-slate-700 border-r border-slate-100">{row.rejectionRate}%</td>
+                        <td className="py-2.5 px-1.5 text-center text-slate-700 border-r border-slate-100">{row.moq} units</td>
+                        <td className="py-2.5 px-2 text-center">
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-bold border bg-slate-50 text-slate-600 border-slate-200">
                             {row.overallScore} / 10
                           </span>
                         </td>

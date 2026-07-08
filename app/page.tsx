@@ -28,7 +28,7 @@ const getTabMetadata = (tab: string) => {
       };
     case "2":
       return {
-        description: "Predictive stockout analysis by store, location, and product bounds. Use the tab bar below to switch views.",
+        description: "",
       };
     case "3":
       return {
