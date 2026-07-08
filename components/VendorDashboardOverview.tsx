@@ -51,13 +51,13 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
   // KPI 1 - Vendors Needing Attention
   // Formula: COUNT(DISTINCT Vendor) WHERE Vendor has unresolved critical issue
   const vendorsNeedingAttention = new Set(
-    issues.filter(i => (i.priority === "Critical" || i.priority === "High") && i.status !== "Resolved").map(i => i.vendorId)
+    issues.filter(i => i.priority === "High" && i.status !== "Resolved").map(i => i.vendorId)
   ).size;
 
   // KPI 2 - Purchase Orders Awaiting Action
-  // Formula: COUNT(PO) WHERE Status IN (Pending Approval, Pending Review, Returned)
+  // Formula: COUNT(PO) WHERE Status = Pending Approval
   const posAwaitingAction = purchaseOrders.filter(po => 
-    po.status === "Pending Approval" || po.status === "Pending Review" || po.status === "Returned"
+    po.status === "Pending Approval"
   ).length;
 
   // KPI 3 - Delayed Deliveries
@@ -108,16 +108,15 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
 
   // KPI 5 - Critical Vendor Issues
   // Formula: COUNT(Issues) WHERE Priority = Critical AND Status = Open
-  const criticalVendorIssues = issues.filter(i => (i.priority === "Critical" || i.priority === "High") && i.status === "Open").length;
+  const criticalVendorIssues = issues.filter(i => i.priority === "High" && i.status === "Open").length;
 
-  // KPI 6 - Deliveries Due Today
-  // Formula: COUNT(Deliveries) WHERE Expected Delivery Date = Today
+  // flex row items / deliveries Due Today
   const deliveriesDueToday = purchaseOrders.filter(po => po.expectedDeliveryDate === todayStr && po.status !== "Delivered").length;
 
   // 2. VENDOR ACTION CENTER
   const openVendorIssues = issues.filter(i => i.status === "Open").sort((a, b) => {
-    const pA = a.priority === "Critical" ? 3 : a.priority === "High" ? 2 : 1;
-    const pB = b.priority === "Critical" ? 3 : b.priority === "High" ? 2 : 1;
+    const pA = a.priority === "High" ? 2 : a.priority === "Medium" ? 1 : 0;
+    const pB = b.priority === "High" ? 2 : b.priority === "Medium" ? 1 : 0;
     return pB - pA;
   }).slice(0, 5);
 
@@ -166,7 +165,7 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
   // 4. PURCHASE ORDER STATUS (Donut Chart)
   // We group them into mutually exclusive buckets so the total matches exactly.
   const poStatusesCount = [
-    { label: "Awaiting Action", count: purchaseOrders.filter(po => po.status === "Pending Approval" || po.status === "Pending Review" || po.status === "Returned").length, color: "#f59e0b" },
+    { label: "Awaiting Action", count: purchaseOrders.filter(po => po.status === "Pending Approval").length, color: "#f59e0b" },
     { label: "Approved", count: purchaseOrders.filter(po => po.status === "Approved").length, color: "#3b82f6" },
     { label: "In Transit", count: purchaseOrders.filter(po => po.status === "In Transit").length, color: "#6366f1" },
     { label: "Delivered", count: purchaseOrders.filter(po => po.status === "Delivered").length, color: "#10b981" },
@@ -213,57 +212,61 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+    <div className="space-y-8 animate-fadeIn pb-20">
       
       {/* 1. EXECUTIVE KPI CARDS */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-5">
         {[
-          { label: "VENDORS NEEDING ATTENTION", val: vendorsNeedingAttention },
-          { label: "POS AWAITING ACTION", val: posAwaitingAction },
-          { label: "DELAYED DELIVERIES", val: delayedDeliveries },
-          { label: "PRODUCTS AT SUPPLY RISK", val: supplyRiskProductsCount },
-          { label: "CRITICAL VENDOR ISSUES", val: criticalVendorIssues },
-          { label: "DELIVERIES DUE TODAY", val: deliveriesDueToday },
+          { label: "VENDORS ATTENTION", val: vendorsNeedingAttention, color: "border-t-rose-500", desc: "Critical SLA alerts" },
+          { label: "POS AWAITING ACTION", val: posAwaitingAction, color: "border-t-orange-500", desc: "Pending approvals" },
+          { label: "DELAYED DELIVERIES", val: delayedDeliveries, color: "border-t-red-600", desc: "Past due orders" },
+          { label: "PRODUCTS SUPPLY RISK", val: supplyRiskProductsCount, color: "border-t-amber-500", desc: "Below safety stock" },
+          { label: "CRITICAL VENDOR ISSUES", val: criticalVendorIssues, color: "border-t-rose-600", desc: "Open vendor disputes" },
+          { label: "DELIVERIES DUE TODAY", val: deliveriesDueToday, color: "border-t-bp-green", desc: "Expected arrivals" },
         ].map((kpi, idx) => (
-          <div key={idx} className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
-            <h3 className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">{kpi.label}</h3>
-            <p className={`text-3xl font-semibold text-slate-800 tracking-tight`}>{kpi.val}</p>
+          <div key={idx} className={`bg-white rounded-2xl p-5 border-t-4 ${kpi.color} border-x border-b border-slate-100 shadow-sm flex flex-col justify-between card-hover-effect text-left`}>
+            <h3 className="text-[9.5px] font-extrabold text-slate-500 uppercase tracking-wider mb-2 leading-tight">{kpi.label}</h3>
+            <p className="text-3xl font-extrabold text-slate-900 tracking-tight">{kpi.val}</p>
+            <p className="text-[9px] text-slate-400 font-semibold mt-1">{kpi.desc}</p>
           </div>
         ))}
       </div>
 
       {/* 2. VENDOR ACTION CENTER */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
-          <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Vendor Action Center</h3>
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden text-left card-hover-effect">
+        <div className="px-6 py-5 border-b border-slate-50 flex justify-between items-center flex-wrap gap-2">
+          <div>
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Vendor Action Center</h3>
+            <p className="text-[10px] text-slate-400 font-medium mt-0.5">Critical compliance actions and updates</p>
+          </div>
           {openVendorIssues.length > 0 && (
-            <span className="px-2.5 py-1 bg-slate-100 text-slate-600 text-xs font-semibold rounded-full border border-slate-200">
+            <span className="px-2.5 py-0.5 bg-rose-50 text-rose-600 text-xs font-bold rounded-full border border-rose-100">
               {openVendorIssues.length} Actions Required
             </span>
           )}
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-100">
+        <div className="overflow-x-auto scrollbar-thin">
+          <table className="w-full text-xs text-left">
+            <thead className="text-[10px] text-slate-400 uppercase tracking-wider font-extrabold bg-slate-50/50 border-b border-slate-50">
               <tr>
-                <th className="px-6 py-4 font-medium">Vendor</th>
-                <th className="px-6 py-4 font-medium">Issue</th>
-                <th className="px-6 py-4 font-medium text-center">Severity</th>
-                <th className="px-6 py-4 font-medium text-right">Action Required</th>
+                <th className="px-6 py-4">Vendor</th>
+                <th className="px-6 py-4">Issue</th>
+                <th className="px-6 py-4 text-center">Severity</th>
+                <th className="px-6 py-4 text-right">Action Required</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100/60 font-semibold text-slate-700">
               {openVendorIssues.map((issue, idx) => (
-                <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-slate-700">{issue.vendorName}</td>
-                  <td className="px-6 py-4 text-slate-500 font-normal">{issue.issueType}</td>
+                <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="px-6 py-4 font-bold text-slate-900">{issue.vendorName}</td>
+                  <td className="px-6 py-4 text-slate-500 font-medium">{issue.issueType}</td>
                   <td className="px-6 py-4 text-center">
-                    <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${getStatusBadgeStyle(issue.priority)}`}>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider border ${getStatusBadgeStyle(issue.priority)}`}>
                       {issue.priority}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button className="text-xs font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-900 px-4 py-2 rounded-lg shadow-sm transition-colors">
+                    <button className="text-[10px] font-bold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 px-3.5 py-1.5 rounded-lg shadow-sm transition">
                       {issue.issueType.includes("Invoice") ? "Verify Invoice" : issue.issueType.includes("SLA") ? "Review Performance" : "Follow Up"}
                     </button>
                   </td>
@@ -271,7 +274,7 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
               ))}
               {openVendorIssues.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-slate-500 font-medium">No immediate vendor actions required today.</td>
+                  <td colSpan={4} className="px-6 py-8 text-center text-slate-400 font-medium">No immediate vendor actions required today.</td>
                 </tr>
               )}
             </tbody>
@@ -280,33 +283,34 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
       </div>
 
       {/* 3. ROW 1: VENDOR PERFORMANCE & PO STATUS */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-left">
         
         {/* Vendor Performance */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-100">
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Vendor Performance</h3>
+        <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden card-hover-effect">
+          <div className="px-6 py-5 border-b border-slate-50">
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Vendor Performance</h3>
+            <p className="text-[10px] text-slate-400 font-medium mt-0.5">Delivery timelines and fulfillment rates</p>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-100">
+          <div className="overflow-x-auto scrollbar-thin">
+            <table className="w-full text-xs text-left">
+              <thead className="text-[10px] text-slate-400 uppercase tracking-wider font-extrabold bg-slate-50/50 border-b border-slate-50">
                 <tr>
-                  <th className="px-6 py-4 font-medium">Vendor</th>
-                  <th className="px-6 py-4 font-medium text-right">On-Time Delivery</th>
-                  <th className="px-6 py-4 font-medium text-right">Fill Rate</th>
-                  <th className="px-6 py-4 font-medium text-right">Open POs</th>
-                  <th className="px-6 py-4 font-medium text-center">Status</th>
+                  <th className="px-6 py-4">Vendor</th>
+                  <th className="px-6 py-4 text-right">On-Time Delivery</th>
+                  <th className="px-6 py-4 text-right">Fill Rate</th>
+                  <th className="px-6 py-4 text-right">Open POs</th>
+                  <th className="px-6 py-4 text-center">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100/60 font-semibold text-slate-700">
                 {vendorPerformanceData.map((v, i) => (
-                  <tr key={i} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 font-medium text-slate-700 cursor-pointer hover:text-emerald-600 transition-colors" onClick={() => onNavigate("vendors", "details", v.name)}>{v.name}</td>
-                    <td className="px-6 py-4 text-right font-normal text-slate-500">{v.onTime}</td>
-                    <td className="px-6 py-4 text-right font-normal text-slate-500">{v.fill}</td>
-                    <td className="px-6 py-4 text-right font-normal text-slate-500">{v.openPOs}</td>
+                  <tr key={i} className="hover:bg-slate-50/50">
+                    <td className="px-6 py-4 font-bold text-bp-green hover:text-bp-green-dark cursor-pointer transition" onClick={() => onNavigate("3", "vendor_wise", v.name)}>{v.name}</td>
+                    <td className="px-6 py-4 text-right text-slate-600">{v.onTime}</td>
+                    <td className="px-6 py-4 text-right text-slate-600">{v.fill}</td>
+                    <td className="px-6 py-4 text-right text-slate-500 font-bold">{v.openPOs}</td>
                     <td className="px-6 py-4 text-center">
-                       <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${getStatusBadgeStyle(v.status)}`}>
+                       <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider border ${getStatusBadgeStyle(v.status)}`}>
                         {v.status}
                       </span>
                     </td>
@@ -318,10 +322,13 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
         </div>
 
         {/* PO Status Donut */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col">
-          <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-6">Purchase Order Status</h3>
-          <div className="flex-1 flex flex-col justify-center items-center">
-            <div className="relative w-48 h-48 mb-6 drop-shadow-md">
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 flex flex-col card-hover-effect">
+          <div className="border-b border-slate-50 pb-3.5 mb-5 text-left">
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Purchase Order Status</h3>
+            <p className="text-[10px] text-slate-400 font-medium mt-0.5">Overview of active order states</p>
+          </div>
+          <div className="flex-grow flex flex-col justify-center items-center py-2">
+            <div className="relative w-36 h-36 mb-5">
               <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
                 {poSegments.map((segment, i) => (
                   <circle
@@ -329,25 +336,25 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
                     cx="50" cy="50" r="40"
                     fill="transparent"
                     stroke={segment.color}
-                    strokeWidth="16"
+                    strokeWidth="12"
                     strokeDasharray={`${segment.len} 251.327`}
                     strokeDashoffset={-segment.offset}
-                    className="transition-all duration-1000 ease-out cursor-pointer hover:opacity-80"
+                    className="transition-all duration-1000 ease-out cursor-pointer hover:opacity-85"
                   />
                 ))}
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-3xl font-black text-slate-800 tracking-tighter">{totalPOs}</span>
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total</span>
+                <span className="text-3xl font-extrabold text-slate-900 tracking-tighter leading-none">{totalPOs}</span>
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1.5">POs</span>
               </div>
             </div>
-            <div className="w-full grid grid-cols-2 gap-3">
+            <div className="w-full grid grid-cols-2 gap-2 text-xs font-semibold">
               {poStatusesCount.filter(s => s.count > 0).map((s, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: s.color }}></div>
-                  <div className="flex flex-col">
-                     <span className="text-[10px] font-bold text-slate-500 uppercase leading-none">{s.label}</span>
-                     <span className="text-sm font-black text-slate-800">{s.count}</span>
+                <div key={i} className="flex items-center gap-2 hover:bg-slate-50 px-1 py-0.5 rounded">
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.color }}></div>
+                  <div className="flex flex-col text-left">
+                     <span className="text-[9px] font-bold text-slate-400 uppercase leading-tight">{s.label}</span>
+                     <span className="text-xs font-extrabold text-slate-800">{s.count}</span>
                   </div>
                 </div>
               ))}
@@ -357,41 +364,42 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
       </div>
 
       {/* 4. ROW 2: PRODUCTS AT SUPPLY RISK & VENDOR DELAY IMPACT */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-left">
         
         {/* Products at Supply Risk */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-100">
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Products at Supply Risk</h3>
+        <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden card-hover-effect">
+          <div className="px-6 py-5 border-b border-slate-50">
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Products at Supply Risk</h3>
+            <p className="text-[10px] text-slate-400 font-medium mt-0.5">Critical raw materials and SKUs with supply risk</p>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-100">
+          <div className="overflow-x-auto scrollbar-thin">
+            <table className="w-full text-xs text-left">
+              <thead className="text-[10px] text-slate-400 uppercase tracking-wider font-extrabold bg-slate-50/50 border-b border-slate-50">
                 <tr>
-                  <th className="px-6 py-4 font-medium">Product</th>
-                  <th className="px-6 py-4 font-medium">Vendor</th>
-                  <th className="px-6 py-4 font-medium">Store</th>
-                  <th className="px-6 py-4 font-medium text-right">Days Remaining</th>
-                  <th className="px-6 py-4 font-medium text-center">Risk</th>
+                  <th className="px-6 py-4">Product</th>
+                  <th className="px-6 py-4">Vendor</th>
+                  <th className="px-6 py-4">Store</th>
+                  <th className="px-6 py-4 text-right">Stock</th>
+                  <th className="px-6 py-4 text-center">Risk</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100/60 font-semibold text-slate-700">
                 {supplyRiskProducts.slice(0, 5).map((p, i) => (
-                  <tr key={i} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 font-medium text-slate-700">{p.product}</td>
-                    <td className="px-6 py-4 font-normal text-slate-500">{p.vendor}</td>
-                    <td className="px-6 py-4 font-normal text-slate-500">{p.store}</td>
-                    <td className="px-6 py-4 text-right font-semibold text-slate-700">{p.daysRemaining}</td>
+                  <tr key={i} className="hover:bg-slate-50/50">
+                    <td className="px-6 py-4 font-bold text-slate-900">{p.product}</td>
+                    <td className="px-6 py-4 text-slate-500 font-medium">{p.vendor}</td>
+                    <td className="px-6 py-4 text-slate-500 font-medium">{p.store}</td>
+                    <td className="px-6 py-4 text-right text-rose-600 font-bold">{p.daysRemaining}</td>
                     <td className="px-6 py-4 text-center">
-                       <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${getStatusBadgeStyle(p.risk)}`}>
+                       <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider border ${getStatusBadgeStyle(p.risk)}`}>
                         {p.risk}
-                      </span>
+                       </span>
                     </td>
                   </tr>
                 ))}
                 {supplyRiskProducts.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-slate-500 font-medium">No products currently at supply risk.</td>
+                    <td colSpan={5} className="px-6 py-8 text-center text-slate-400 font-medium">No products currently at supply risk.</td>
                   </tr>
                 )}
               </tbody>
@@ -400,25 +408,28 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
         </div>
 
         {/* Vendor Delay Impact */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col">
-          <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-6">Vendor Delay Impact</h3>
-          <div className="flex-1 flex flex-col justify-center space-y-5">
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 flex flex-col card-hover-effect">
+          <div className="border-b border-slate-50 pb-3.5 mb-5">
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Vendor Delay Impact</h3>
+            <p className="text-[10px] text-slate-400 font-medium mt-0.5">Operational impact counts</p>
+          </div>
+          <div className="flex-grow flex flex-col justify-center space-y-4">
             {vendorDelays.map((v, i) => (
-              <div key={i} className="flex flex-col gap-1">
-                <div className="flex justify-between items-end">
-                  <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide truncate max-w-[150px]">{v.vendor}</span>
-                  <span className="text-xs font-semibold text-slate-700">{v.count} <span className="text-slate-400 font-normal">Impacted</span></span>
+              <div key={i} className="flex flex-col gap-1.5">
+                <div className="flex justify-between items-end text-xs font-semibold">
+                  <span className="text-slate-700 truncate max-w-[170px]">{v.vendor}</span>
+                  <span className="text-slate-800 font-extrabold">{v.count} <span className="text-slate-400 font-semibold text-[10px]">Impacted</span></span>
                 </div>
-                <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                <div className="w-full bg-slate-50 border border-slate-100/60 rounded-full h-2 overflow-hidden">
                   <div 
-                    className="bg-slate-400 h-1.5 rounded-full" 
+                    className="bg-orange-500 h-2 rounded-full transition-all duration-300" 
                     style={{ width: `${(v.count / maxDelayCount) * 100}%` }}
                   ></div>
                 </div>
               </div>
             ))}
             {vendorDelays.length === 0 && (
-              <div className="text-center text-slate-500 text-sm font-medium py-8">No current vendor delays impacting operations.</div>
+              <div className="text-center text-slate-400 text-xs font-medium py-8">No current vendor delays impacting operations.</div>
             )}
           </div>
         </div>
@@ -426,75 +437,75 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
       </div>
 
       {/* 5. AI PROCUREMENT RECOMMENDATIONS */}
-      <div className="bg-slate-900 rounded-2xl shadow-sm border border-slate-800 p-6 relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
-          <svg className="w-32 h-32 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      <div className="bg-gradient-to-br from-[#052416] to-[#0a482b] rounded-3xl shadow-md border border-emerald-900/60 p-6 relative overflow-hidden card-hover-effect text-left">
+        <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
+          <svg className="w-40 h-40 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
         </div>
         <div className="relative z-10">
-          <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-6 flex items-center gap-2">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-            AI Procurement Recommendations
+          <h3 className="text-xs font-bold text-bp-yellow uppercase tracking-wider mb-5 flex items-center gap-2">
+            <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            AI Procurement Action Items
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
              {/* Realistic recommendations generated based on earlier conditions */}
              {delayedDeliveries > 0 && (
-                <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl p-4 hover:bg-white/20 transition-colors flex justify-between items-center gap-4">
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex justify-between items-center gap-4 hover:bg-white/10 transition">
                   <div className="flex items-start gap-3">
-                    <span className="text-emerald-400 mt-1">✔</span>
+                    <span className="text-bp-yellow font-extrabold text-sm mt-0.5">✦</span>
                     <div>
-                      <h4 className="text-white font-bold text-sm mb-1">Follow up with Delayed Vendors</h4>
-                      <p className="text-indigo-200 text-xs">There are {delayedDeliveries} delayed deliveries impacting operations.</p>
+                      <h4 className="text-white font-bold text-sm leading-snug">Follow up with Delayed Vendors</h4>
+                      <p className="text-emerald-100/70 text-[10.5px] mt-0.5">There are {delayedDeliveries} delayed deliveries impacting operations.</p>
                     </div>
                   </div>
-                  <button className="whitespace-nowrap px-4 py-2 bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-bold rounded-lg shadow-sm transition-colors">Follow Up</button>
+                  <button className="whitespace-nowrap px-4 py-2 bg-bp-yellow hover:bg-yellow-400 text-slate-950 text-[10.5px] font-bold rounded-xl shadow transition">Follow Up</button>
                 </div>
              )}
              {posAwaitingAction > 0 && (
-                <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl p-4 hover:bg-white/20 transition-colors flex justify-between items-center gap-4">
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex justify-between items-center gap-4 hover:bg-white/10 transition">
                   <div className="flex items-start gap-3">
-                    <span className="text-emerald-400 mt-1">✔</span>
+                    <span className="text-bp-yellow font-extrabold text-sm mt-0.5">✦</span>
                     <div>
-                      <h4 className="text-white font-bold text-sm mb-1">Approve Pending Purchase Orders</h4>
-                      <p className="text-indigo-200 text-xs">You have {posAwaitingAction} purchase orders waiting for your approval.</p>
+                      <h4 className="text-white font-bold text-sm leading-snug">Approve Pending Purchase Orders</h4>
+                      <p className="text-emerald-100/70 text-[10.5px] mt-0.5">You have {posAwaitingAction} purchase orders waiting for your approval.</p>
                     </div>
                   </div>
-                  <button className="whitespace-nowrap px-4 py-2 bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-bold rounded-lg shadow-sm transition-colors">Review POs</button>
+                  <button className="whitespace-nowrap px-4 py-2 bg-bp-yellow hover:bg-yellow-400 text-slate-950 text-[10.5px] font-bold rounded-xl shadow transition">Review POs</button>
                 </div>
              )}
              {supplyRiskProductsCount > 0 && (
-                <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl p-4 hover:bg-white/20 transition-colors flex justify-between items-center gap-4">
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex justify-between items-center gap-4 hover:bg-white/10 transition">
                   <div className="flex items-start gap-3">
-                    <span className="text-emerald-400 mt-1">✔</span>
+                    <span className="text-bp-yellow font-extrabold text-sm mt-0.5">✦</span>
                     <div>
-                      <h4 className="text-white font-bold text-sm mb-1">Expedite Supply Risk Replenishments</h4>
-                      <p className="text-indigo-200 text-xs">Prioritize replenishment for {supplyRiskProductsCount} products at risk.</p>
+                      <h4 className="text-white font-bold text-sm leading-snug">Expedite Supply Risk Replenishments</h4>
+                      <p className="text-emerald-100/70 text-[10.5px] mt-0.5">Prioritize replenishment for {supplyRiskProductsCount} products at risk.</p>
                     </div>
                   </div>
-                  <button className="whitespace-nowrap px-4 py-2 bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-bold rounded-lg shadow-sm transition-colors">Expedite</button>
+                  <button className="whitespace-nowrap px-4 py-2 bg-bp-yellow hover:bg-yellow-400 text-slate-950 text-[10.5px] font-bold rounded-xl shadow transition">Expedite</button>
                 </div>
              )}
              {criticalVendorIssues > 0 && (
-                <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl p-4 hover:bg-white/20 transition-colors flex justify-between items-center gap-4">
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex justify-between items-center gap-4 hover:bg-white/10 transition">
                   <div className="flex items-start gap-3">
-                    <span className="text-emerald-400 mt-1">✔</span>
+                    <span className="text-bp-yellow font-extrabold text-sm mt-0.5">✦</span>
                     <div>
-                      <h4 className="text-white font-bold text-sm mb-1">Escalate Critical Vendor Issues</h4>
-                      <p className="text-indigo-200 text-xs">{criticalVendorIssues} critical vendor issues require immediate escalation.</p>
+                      <h4 className="text-white font-bold text-sm leading-snug">Escalate Critical Vendor Issues</h4>
+                      <p className="text-emerald-100/70 text-[10.5px] mt-0.5">{criticalVendorIssues} critical vendor issues require immediate escalation.</p>
                     </div>
                   </div>
-                  <button className="whitespace-nowrap px-4 py-2 bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-bold rounded-lg shadow-sm transition-colors">Escalate</button>
+                  <button className="whitespace-nowrap px-4 py-2 bg-rose-500 hover:bg-rose-400 text-white text-[10.5px] font-bold rounded-xl shadow transition">Escalate</button>
                 </div>
              )}
              {recommendations.slice(0, Math.max(0, 4 - [delayedDeliveries, posAwaitingAction, supplyRiskProductsCount, criticalVendorIssues].filter(x => x > 0).length)).map(rec => (
-               <div key={rec.id} className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl p-4 hover:bg-white/20 transition-colors flex justify-between items-center gap-4">
+                <div key={rec.id} className="bg-white/5 border border-white/10 rounded-2xl p-4 flex justify-between items-center gap-4 hover:bg-white/10 transition">
                   <div className="flex items-start gap-3">
-                    <span className="text-emerald-400 mt-1">✔</span>
+                    <span className="text-bp-yellow font-extrabold text-sm mt-0.5">✦</span>
                     <div>
-                      <h4 className="text-white font-bold text-sm mb-1">{rec.recommendation}</h4>
-                      <p className="text-indigo-200 text-xs">{rec.reason}</p>
+                      <h4 className="text-white font-bold text-sm leading-snug">{rec.recommendation}</h4>
+                      <p className="text-emerald-100/70 text-[10.5px] mt-0.5">{rec.reason}</p>
                     </div>
                   </div>
-                  <button className="whitespace-nowrap px-4 py-2 bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-bold rounded-lg shadow-sm transition-colors">{rec.actionLabel}</button>
+                  <button className="whitespace-nowrap px-4 py-2 bg-bp-yellow hover:bg-yellow-400 text-slate-950 text-[10.5px] font-bold rounded-xl shadow transition">{rec.actionLabel}</button>
                 </div>
              ))}
           </div>

@@ -233,165 +233,114 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-fadeIn">
 
       {/* KPI Cards */}
-      <div className={`grid gap-4 ${isStoreManager ? "grid-cols-2 lg:grid-cols-5" : "grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"}`}>
+      <div className={`grid gap-5 ${isStoreManager ? "grid-cols-2 lg:grid-cols-5" : "grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"}`}>
 
         {!isStoreManager && (
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm">
-            <div className="flex items-center gap-1.5 text-slate-400 mb-1">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
-              <span className="text-[11px] font-bold uppercase tracking-wider">Total Stores</span>
+          <div className="bg-white border-t-4 border-t-bp-green border-x border-b border-slate-100 rounded-2xl p-5 shadow-sm card-hover-effect text-left">
+            <div className="flex items-center gap-2 text-slate-400 mb-2">
+              <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center text-bp-green flex-shrink-0">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+              </div>
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Total Stores</span>
             </div>
-            <span className="text-2xl font-bold tracking-tight text-slate-900">{totalStores}</span>
+            <span className="text-3xl font-extrabold tracking-tight text-slate-900">{totalStores}</span>
+            <p className="text-[10px] text-slate-400 mt-1 font-medium">Active retail outlets</p>
           </div>
         )}
 
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center gap-1.5 text-slate-400 mb-1">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
-            <span className="text-[11px] font-bold uppercase tracking-wider">Total Products</span>
-          </div>
-          <span className="text-2xl font-bold tracking-tight text-slate-900">{totalMasterProducts}</span>
-          <p className="text-[10px] text-slate-400 mt-0.5">Active SKUs</p>
-        </div>
-
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center gap-1.5 text-slate-400 mb-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Inventory Value</span>
-          </div>
-          <span className="text-2xl font-bold tracking-tight text-slate-900">{formattedValuation}</span>
-          <p className="text-[10px] text-slate-400 mt-0.5">Across all products</p>
-        </div>
-
-        <div className="bg-white border border-rose-100 rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center gap-1.5 mb-1">
-            <div className="w-5 h-5 bg-rose-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <svg className="w-3 h-3 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+        <div className="bg-white border-t-4 border-t-bp-green border-x border-b border-slate-100 rounded-2xl p-5 shadow-sm card-hover-effect text-left">
+          <div className="flex items-center gap-2 text-slate-400 mb-2">
+            <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center text-bp-green flex-shrink-0">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
             </div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-rose-600">Critical Stockout</span>
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Total Products</span>
           </div>
-          <span className="text-2xl font-bold tracking-tight text-rose-600">{criticalStockoutDisplay}</span>
-          <p className="text-[10px] text-slate-400 mt-0.5">{atRiskPct}% of {atRiskLabel}</p>
+          <span className="text-3xl font-extrabold tracking-tight text-slate-900">{totalMasterProducts}</span>
+          <p className="text-[10px] text-slate-400 mt-1 font-medium">Active items</p>
         </div>
 
-        <div className="bg-white border border-amber-100 rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center gap-1.5 mb-1">
-            <div className="w-5 h-5 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <svg className="w-3 h-3 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>
+        <div className="bg-white border-t-4 border-t-bp-yellow border-x border-b border-slate-100 rounded-2xl p-5 shadow-sm card-hover-effect text-left">
+          <div className="flex items-center gap-2 text-slate-400 mb-2">
+            <div className="w-7 h-7 rounded-lg bg-yellow-50 flex items-center justify-center text-yellow-600 flex-shrink-0">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M12 16V5" /></svg>
             </div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-600">Below Reorder</span>
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Inventory Value</span>
           </div>
-          <span className="text-2xl font-bold tracking-tight text-amber-600">{belowReorderCount}</span>
-          <p className="text-[10px] text-slate-400 mt-0.5">{belowReorderPct}% of products</p>
+          <span className="text-3xl font-extrabold tracking-tight text-slate-900">{formattedValuation}</span>
+          <p className="text-[10px] text-slate-400 mt-1 font-medium">Stock valuation</p>
         </div>
 
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center gap-1.5 mb-1">
-            <div className="w-5 h-5 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <svg className="w-3 h-3 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        <div className="bg-white border-t-4 border-t-rose-500 border-x border-b border-slate-100 rounded-2xl p-5 shadow-sm card-hover-effect text-left">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-7 h-7 bg-rose-550/10 rounded-lg flex items-center justify-center text-rose-600 flex-shrink-0">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
             </div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-purple-600">Inventory Health</span>
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-600">Critical Stockout</span>
           </div>
-          <span className={`text-2xl font-bold tracking-tight ${inventoryHealthColor}`}>{inventoryHealthPct}%</span>
-          <p className={`text-[10px] font-bold mt-0.5 ${inventoryHealthColor}`}>{inventoryHealthLabel}</p>
+          <span className="text-3xl font-extrabold tracking-tight text-rose-600">{criticalStockoutDisplay}</span>
+          <p className="text-[10px] text-slate-400 mt-1 font-medium">{atRiskPct}% of {atRiskLabel} at risk</p>
         </div>
 
-        {/* <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center gap-1.5 mb-1">
-            <div className="w-5 h-5 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <svg className="w-3 h-3 text-bp-green" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+        <div className="bg-white border-t-4 border-t-orange-500 border-x border-b border-slate-100 rounded-2xl p-5 shadow-sm card-hover-effect text-left">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-7 h-7 bg-orange-50 rounded-lg flex items-center justify-center text-orange-500 flex-shrink-0">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>
             </div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-bp-green">Pending PRs</span>
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-orange-500">Below Reorder</span>
           </div>
-          <span className="text-2xl font-bold tracking-tight text-slate-900">{pendingPrCount}</span>
-          <p className="text-[10px] text-slate-400 mt-0.5">Value: {formattedPrValue}</p>
-        </div> */}
+          <span className="text-3xl font-extrabold tracking-tight text-orange-550">{belowReorderCount}</span>
+          <p className="text-[10px] text-slate-400 mt-1 font-medium">{belowReorderPct}% SKU reorder limits</p>
+        </div>
+
+        <div className="bg-white border-t-4 border-t-emerald-500 border-x border-b border-slate-100 rounded-2xl p-5 shadow-sm card-hover-effect text-left">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-7 h-7 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600 flex-shrink-0">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </div>
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-600">Inventory Health</span>
+          </div>
+          <span className={`text-3xl font-extrabold tracking-tight ${inventoryHealthColor}`}>{inventoryHealthPct}%</span>
+          <p className={`text-[10px] font-extrabold mt-1 uppercase ${inventoryHealthColor}`}>{inventoryHealthLabel}</p>
+        </div>
 
       </div>
-
-      {/* Predictive Stockout Inline Table */}
-      {/* <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-5">
-          <div>
-            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Predictive Stockout</h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">Products Needing Attention</p>
-          </div>
-          <button className="text-xs font-bold text-bp-green hover:underline" onClick={() => onNavigate("2", "store")}>View All ?</button>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="border-b border-slate-100 text-slate-400 font-bold uppercase text-[10px]">
-                <th className="py-2.5 pr-3">Product Name</th>
-                <th className="py-2.5 pr-3">SKU</th>
-                <th className="py-2.5 pr-3 text-right">Current Stock</th>
-                <th className="py-2.5 pr-3">UOM</th>
-                <th className="py-2.5 pr-3">Stockout Date</th>
-                <th className="py-2.5 pr-3 text-center">Days Left</th>
-                <th className="py-2.5 pr-3 text-center">Lead Time</th>
-                <th className="py-2.5 pr-3 text-right">ROQ</th>
-                <th className="py-2.5 pr-3">Order By</th>
-                <th className="py-2.5">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50 font-semibold text-slate-700">
-              {criticalInlineItems.length === 0 ? (
-                <tr><td colSpan={10} className="py-8 text-center text-slate-400 font-medium">No critical items found</td></tr>
-              ) : criticalInlineItems.map((row, idx) => (
-                <tr key={idx} className="hover:bg-slate-50/60 transition-colors cursor-pointer" onClick={() => onNavigate("2", "store")}>
-                  <td className="py-3 pr-3 text-bp-green font-semibold max-w-[160px] truncate" title={row.name}>{row.name}</td>
-                  <td className="py-3 pr-3 text-slate-400 font-medium">{row.code}</td>
-                  <td className={`py-3 pr-3 text-right font-bold ${row.riskLevel === "High" ? "text-rose-600" : "text-amber-600"}`}>{row.currentStock}</td>
-                  <td className="py-3 pr-3 text-slate-500">{row.uom}</td>
-                  <td className="py-3 pr-3 text-slate-700">{row.predictedStockoutDate}</td>
-                  <td className="py-3 pr-3 text-center">
-                    <span className={`font-bold text-sm ${row.daysRemaining <= 3 ? "text-rose-600" : row.daysRemaining <= 7 ? "text-amber-600" : "text-slate-700"}`}>{row.daysRemaining}</span>
-                  </td>
-                  <td className="py-3 pr-3 text-center text-slate-500">{row.leadTimeDays}d</td>
-                  <td className="py-3 pr-3 text-right text-slate-700">{row.recommendedRoq}</td>
-                  <td className="py-3 pr-3 text-slate-600">{row.orderByDate}</td>
-                  <td className="py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] ${getPrBadgeClass(row.prMrStatus)}`}>{row.prMrStatus}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div> */}
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* Stockout Risk Summary Donut */}
-        <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
-          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4">Stockout Risk Summary</h3>
-          <div className="flex items-center justify-around flex-grow gap-4">
+        <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm card-hover-effect flex flex-col justify-between">
+          <div className="border-b border-slate-50 pb-3.5 mb-4 text-left">
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Stockout Risk Summary</h3>
+            <p className="text-[10px] text-slate-400 font-medium mt-0.5">Stock depletion risk windows</p>
+          </div>
+          <div className="flex items-center justify-around flex-grow gap-4 py-3">
             <div className="relative w-32 h-32 flex-shrink-0">
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="40" stroke="#f1f5f9" strokeWidth="12" fill="transparent" />
+                <circle cx="50" cy="50" r="40" stroke="#f8fafc" strokeWidth="12" fill="transparent" />
                 {riskDonutSegments.map((segment) => (
                   <circle key={segment.label} cx="50" cy="50" r="40" stroke={segment.color} strokeWidth="12"
                     strokeDasharray={`${segment.length} ${circumference}`} strokeDashoffset={segment.offset}
-                    strokeLinecap="round" fill="transparent" className="transition-opacity duration-150 hover:opacity-80">
+                    strokeLinecap="round" fill="transparent" className="transition-opacity duration-150 hover:opacity-85">
                     <title>{`${segment.label}: ${segment.value} (${segment.percent}%)`}</title>
                   </circle>
                 ))}
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-xl font-bold text-slate-900">{totalMasterProducts}</span>
-                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Products</span>
+                <span className="text-2xl font-extrabold text-slate-900 leading-none">{totalMasterProducts}</span>
+                <span className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider mt-1">Products</span>
               </div>
             </div>
-            <div className="flex flex-col gap-2.5 text-xs font-semibold">
+            <div className="flex flex-col gap-2.5 text-xs font-semibold text-left">
               {riskDonutSegments.map((segment) => (
-                <div key={segment.label} className="flex items-center gap-2 rounded-md px-1 py-0.5 hover:bg-slate-50">
-                  <span className={`w-3 h-3 rounded-full ${segment.dotClass} flex-shrink-0`} />
+                <div key={segment.label} className="flex items-center gap-2 rounded-md px-1.5 py-1 hover:bg-slate-50">
+                  <span className={`w-2.5 h-2.5 rounded-full ${segment.dotClass} flex-shrink-0`} />
                   <div className="flex flex-col text-left">
-                    <span className="text-slate-500 text-[10px]">{segment.label} ({segment.range})</span>
-                    <span className="text-slate-800 font-bold">{segment.value} <span className="text-[10px] text-slate-400">({segment.percent}%)</span></span>
+                    <span className="text-slate-400 text-[9px] font-bold uppercase tracking-wide">{segment.label} ({segment.range})</span>
+                    <span className="text-slate-800 font-extrabold text-xs">{segment.value} <span className="text-[10px] text-slate-400">({segment.percent}%)</span></span>
                   </div>
                 </div>
               ))}
@@ -400,64 +349,68 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
         </div>
 
         {/* FSN Summary Donut */}
-        <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
-          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4">FSN Summary</h3>
-          <div className="flex items-center justify-around flex-grow gap-4">
+        <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm card-hover-effect flex flex-col justify-between">
+          <div className="border-b border-slate-50 pb-3.5 mb-4 text-left">
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">FSN Analysis</h3>
+            <p className="text-[10px] text-slate-400 font-medium mt-0.5">Fast, Slow, Non-moving product splits</p>
+          </div>
+          <div className="flex items-center justify-around flex-grow gap-4 py-3">
             <div className="relative w-32 h-32 flex-shrink-0">
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="40" stroke="#f1f5f9" strokeWidth="12" fill="transparent" />
+                <circle cx="50" cy="50" r="40" stroke="#f8fafc" strokeWidth="12" fill="transparent" />
                 {fsnDonutSegments.map((segment) => (
                   <circle key={segment.label} cx="50" cy="50" r="40" stroke={segment.color} strokeWidth="12"
                     strokeDasharray={`${segment.length} ${circumference}`} strokeDashoffset={segment.offset}
-                    strokeLinecap="round" fill="transparent" className="transition-opacity duration-150 hover:opacity-80">
+                    strokeLinecap="round" fill="transparent" className="transition-opacity duration-150 hover:opacity-85">
                     <title>{`${segment.label}: ${segment.value} (${segment.percent}%)`}</title>
                   </circle>
                 ))}
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-xl font-bold text-slate-900">{totalMasterProducts}</span>
-                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Products</span>
+                <span className="text-2xl font-extrabold text-slate-900 leading-none">{totalMasterProducts}</span>
+                <span className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider mt-1">Products</span>
               </div>
             </div>
-            <div className="flex flex-col gap-3 text-xs font-semibold text-left">
+            <div className="flex flex-col gap-2.5 text-xs font-semibold text-left">
               {fsnDonutSegments.map((segment) => (
-                <div key={segment.label} className="flex items-center gap-2 hover:bg-slate-50 px-1 py-0.5 rounded-md">
-                  <span className={`w-3 h-3 rounded-full ${segment.dotClass} flex-shrink-0`} />
+                <div key={segment.label} className="flex items-center gap-2 hover:bg-slate-50 px-1.5 py-1 rounded-md">
+                  <span className={`w-2.5 h-2.5 rounded-full ${segment.dotClass} flex-shrink-0`} />
                   <div className="flex flex-col">
-                    <span className="text-slate-500 text-[10px]">{segment.label}</span>
-                    <span className="text-slate-800 font-bold">{segment.value} <span className="text-[10px] text-slate-400">({segment.percent}%)</span></span>
+                    <span className="text-slate-400 text-[9px] font-bold uppercase tracking-wide">{segment.label}</span>
+                    <span className="text-slate-800 font-extrabold text-xs">{segment.value} <span className="text-[10px] text-slate-400">({segment.percent}%)</span></span>
                   </div>
                 </div>
               ))}
-              <div className="border-t border-slate-100 pt-2 mt-1">
-                <span className="text-[10px] text-slate-400">Total Active Products</span>
-                <p className="font-bold text-slate-800">{totalMasterProducts}</p>
-              </div>
             </div>
           </div>
         </div>
 
         {/* Top 5 Products at Risk */}
-        <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+        <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm card-hover-effect flex flex-col justify-between">
           <div>
-            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 text-left">Top 5 at Risk</h3>
-            <div className="overflow-x-auto">
+            <div className="border-b border-slate-50 pb-3.5 mb-4 text-left">
+              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Top 5 at Risk</h3>
+              <p className="text-[10px] text-slate-400 font-medium mt-0.5">Most urgent stockout predictions</p>
+            </div>
+            <div className="overflow-x-auto scrollbar-thin">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-100 text-slate-400 font-bold uppercase">
-                    <th className="py-2.5">Product</th>
-                    {isStoreManager ? <th className="py-2.5 text-center">Days Left</th> : <th className="py-2.5 text-center">Stores</th>}
-                    <th className="py-2.5 text-right">Date</th>
+                  <tr className="border-b border-slate-100 text-slate-400 font-extrabold uppercase text-[9.5px]">
+                    <th className="py-2.5 pr-2">Product</th>
+                    {isStoreManager ? <th className="py-2.5 text-center px-2">Days Left</th> : <th className="py-2.5 text-center px-2">Stores</th>}
+                    <th className="py-2.5 text-right pl-2">Date</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100/60 font-semibold text-slate-700">
-                  {topAtRiskProducts.map((row, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50/60 cursor-pointer" onClick={() => onNavigate("2", "store", undefined, row.code)}>
-                      <td className="py-3 text-bp-green font-semibold text-left truncate max-w-[100px]" title={row.name}>{row.name}</td>
+                  {topAtRiskProducts.length === 0 ? (
+                    <tr><td colSpan={3} className="py-6 text-center text-slate-400 font-medium">No at-risk products</td></tr>
+                  ) : topAtRiskProducts.map((row, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50/60 transition duration-75 cursor-pointer" onClick={() => onNavigate("2", "store", undefined, row.code)}>
+                      <td className="py-3 pr-2 text-bp-green hover:text-bp-green-dark font-bold text-left truncate max-w-[110px]" title={row.name}>{row.name}</td>
                       {isStoreManager
-                        ? <td className={`py-3 text-center font-bold ${row.daysRemaining <= 3 ? "text-rose-600" : "text-amber-600"}`}>{row.daysRemaining}</td>
-                        : <td className="py-3 text-center text-rose-600 font-bold">{row.storesCount}</td>}
-                      <td className="py-3 text-right text-slate-500 font-medium">{row.soonestDate}</td>
+                        ? <td className={`py-3 text-center px-2 font-bold ${row.daysRemaining <= 3 ? "text-rose-600 animate-pulse" : "text-amber-600"}`}>{row.daysRemaining}</td>
+                        : <td className="py-3 text-center px-2 text-rose-600 font-extrabold">{row.storesCount}</td>}
+                      <td className="py-3 text-right pl-2 text-slate-500 font-semibold">{row.soonestDate}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -465,64 +418,50 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
             </div>
           </div>
           <div className="text-right border-t border-slate-50/80 pt-3">
-            <button className="text-xs font-bold text-bp-green hover:underline" onClick={() => onNavigate("2", "store")}>View All</button>
+            <button className="text-xs font-bold text-bp-green hover:text-bp-green-dark transition" onClick={() => onNavigate("2", "store")}>View All Predictions</button>
           </div>
         </div>
 
       </div>
 
-      {/* Stockout Risk by Category + Forecast Accuracy */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Stockout Risk by Category */}
+      <div className="grid grid-cols-1 gap-6">
 
-        <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm lg:col-span-2">
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Stockout Risk by Category</h3>
-            <div className="flex items-center gap-4 text-[10px] font-bold text-slate-500">
+        <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm card-hover-effect">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between border-b border-slate-50 pb-4 mb-5 gap-3">
+            <div className="text-left">
+              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Stockout Risk by Category</h3>
+              <p className="text-[10px] text-slate-400 font-medium mt-0.5">Aggregate stockout levels by department</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-4 text-[9.5px] font-extrabold text-slate-500">
               <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded-sm bg-rose-500 inline-block" />&le; 7 Days</span>
               <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded-sm bg-amber-400 inline-block" />8-15 Days</span>
               <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded-sm bg-bp-green inline-block" />&gt; 15 Days</span>
             </div>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-4">
             {categoryRows.map((cat, idx) => (
-              <div key={idx} className="flex items-center gap-3 text-xs">
-                <span className="w-28 text-slate-700 font-semibold text-right flex-shrink-0 truncate" title={cat.name}>{cat.name}</span>
-                <div className="flex-grow flex h-6 rounded-lg overflow-hidden bg-slate-100">
+              <div key={idx} className="flex items-center gap-4 text-xs">
+                <span className="w-32 text-slate-700 font-bold text-right flex-shrink-0 truncate" title={cat.name}>{cat.name}</span>
+                <div className="flex-grow flex h-6.5 rounded-lg overflow-hidden bg-slate-50 border border-slate-100 p-0.5">
                   {cat.le7 > 0 && (
-                    <div className="bg-rose-500 flex items-center justify-center text-white font-bold text-[9px]"
-                      style={{ width: `${(cat.le7 / maxCatTotal) * 100}%`, minWidth: "20px" }} title={`≤7 Days: ${cat.le7}`}>{cat.le7}</div>
+                    <div className="bg-rose-500 flex items-center justify-center text-white font-extrabold text-[9px] rounded-l-md transition duration-150 hover:opacity-90"
+                      style={{ width: `${(cat.le7 / maxCatTotal) * 100}%`, minWidth: "24px" }} title={`≤7 Days: ${cat.le7}`}>{cat.le7}</div>
                   )}
                   {cat.eightTo15 > 0 && (
-                    <div className="bg-amber-400 flex items-center justify-center text-white font-bold text-[9px] ml-0.5"
-                      style={{ width: `${(cat.eightTo15 / maxCatTotal) * 100}%`, minWidth: "20px" }} title={`8-15 Days: ${cat.eightTo15}`}>{cat.eightTo15}</div>
+                    <div className="bg-amber-400 flex items-center justify-center text-white font-extrabold text-[9px] ml-0.5 transition duration-150 hover:opacity-90"
+                      style={{ width: `${(cat.eightTo15 / maxCatTotal) * 100}%`, minWidth: "24px" }} title={`8-15 Days: ${cat.eightTo15}`}>{cat.eightTo15}</div>
                   )}
                   {cat.gt15 > 0 && (
-                    <div className="bg-bp-green flex items-center justify-center text-white font-bold text-[9px] ml-0.5"
-                      style={{ width: `${(cat.gt15 / maxCatTotal) * 100}%`, minWidth: "20px" }} title={`>15 Days: ${cat.gt15}`}>{cat.gt15}</div>
+                    <div className="bg-bp-green flex items-center justify-center text-white font-extrabold text-[9px] ml-0.5 rounded-r-md transition duration-150 hover:opacity-90"
+                      style={{ width: `${(cat.gt15 / maxCatTotal) * 100}%`, minWidth: "24px" }} title={`>15 Days: ${cat.gt15}`}>{cat.gt15}</div>
                   )}
                 </div>
-                <span className="w-6 text-slate-500 font-bold text-right flex-shrink-0">{cat.total}</span>
+                <span className="w-8 text-slate-400 font-extrabold text-right flex-shrink-0">{cat.total} <span className="text-[9px] font-normal text-slate-400">SKUs</span></span>
               </div>
             ))}
           </div>
         </div>
-
-        {/* <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm flex flex-col justify-between items-center">
-          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-2 self-start w-full text-left">Forecast Accuracy</h3>
-          <div className="group relative w-36 h-24 flex items-end justify-center overflow-hidden">
-            <svg className="w-36 h-36 absolute top-0" viewBox="0 0 100 100">
-              <path d="M 15 50 A 35 35 0 0 1 85 50" fill="none" stroke="#f1f5f9" strokeWidth="8" strokeLinecap="round" />
-              <path d="M 15 50 A 35 35 0 0 1 85 50" fill="none" stroke="#008751" strokeWidth="8" strokeLinecap="round" strokeDasharray="95.6 109.9" className="transition-opacity duration-150 group-hover:opacity-80">
-                <title>Forecast accuracy: 87%</title>
-              </path>
-            </svg>
-            <div className="flex flex-col items-center z-10">
-              <span className="text-3xl font-bold tracking-tight text-slate-900 leading-none">87%</span>
-              <span className="text-xs text-bp-green font-bold uppercase tracking-wider mt-1">Good</span>
-            </div>
-          </div>
-          <div className="text-center text-slate-400 text-[10px] font-bold uppercase tracking-wider mt-4">Calculated against 30-day forecast models</div>
-        </div> */}
 
       </div>
     </div>

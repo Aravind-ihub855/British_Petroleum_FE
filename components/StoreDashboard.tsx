@@ -134,13 +134,13 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
       )}
 
       {/* Grid of Interactive Table Filters */}
-      <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-xs flex flex-wrap gap-4 items-end text-left text-xs font-semibold text-slate-700">
+      <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-wrap gap-4 items-end text-left text-xs font-semibold text-slate-700 card-hover-effect">
         <div className="flex-1 min-w-[150px] space-y-1">
-          <label className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Category</label>
+          <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Category</label>
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 text-slate-700 py-2 px-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-bp-green focus:border-bp-green transition duration-150"
+            className="w-full bg-slate-50 border border-slate-200 text-slate-700 py-2 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-bp-green transition duration-150 shadow-sm"
           >
             <option value="All">All Categories</option>
             {categories.map((cat) => (
@@ -150,11 +150,11 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
         </div>
 
         <div className="flex-1 min-w-[150px] space-y-1">
-          <label className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Stockout Risk</label>
+          <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Stockout Risk</label>
           <select
             value={filterRisk}
             onChange={(e) => setFilterRisk(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 text-slate-700 py-2 px-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-bp-green focus:border-bp-green transition duration-150"
+            className="w-full bg-slate-50 border border-slate-200 text-slate-700 py-2 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-bp-green transition duration-150 shadow-sm"
           >
             <option value="All">All Risks</option>
             <option value="High">High Risk (≤ 7 Days)</option>
@@ -164,11 +164,11 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
         </div>
 
         <div className="flex-1 min-w-[150px] space-y-1">
-          <label className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">FSN Category</label>
+          <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">FSN Category</label>
           <select
             value={filterFsn}
             onChange={(e) => setFilterFsn(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 text-slate-700 py-2 px-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-bp-green focus:border-bp-green transition duration-150"
+            className="w-full bg-slate-50 border border-slate-200 text-slate-700 py-2 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-bp-green transition duration-150 shadow-sm"
           >
             <option value="All">All FSN Statuses</option>
             <option value="Fast Moving">Fast Moving</option>
@@ -178,16 +178,16 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
         </div>
 
         <div className="flex-[2] min-w-[240px] space-y-1 relative">
-          <label className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Search</label>
+          <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Search</label>
           <div className="relative">
             <input
               type="text"
               placeholder="Search by Product ID or Product Name"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-700 py-2 pl-9 pr-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-bp-green focus:border-bp-green transition duration-150 font-medium"
+              className="w-full bg-slate-50 border border-slate-200 text-slate-700 py-2 pl-9 pr-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-bp-green transition duration-150 font-semibold shadow-sm"
             />
-            <svg className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-4 h-4 text-slate-400 absolute left-3 top-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
@@ -200,7 +200,7 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
             setFilterFsn("All");
             setSearchQuery("");
           }}
-          className="bg-white border border-slate-200 text-slate-500 hover:text-slate-800 py-2 px-4 rounded-lg flex items-center justify-center gap-1.5 transition duration-150 hover:bg-slate-50 min-h-[38px] font-bold border-emerald-500/20 text-bp-green"
+          className="bg-white border border-slate-200 text-bp-green hover:bg-slate-50 py-2 px-4 rounded-lg flex items-center justify-center gap-1.5 transition duration-150 min-h-[38px] font-bold shadow-sm"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
@@ -210,58 +210,59 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
       </div>
 
       {/* KPI Cards Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-xs flex flex-col text-left">
-          <span className="text-xs font-semibold text-slate-400 tracking-wide">Total Products</span>
-          <span className="text-2xl font-bold tracking-tight text-slate-900 mt-2">{totalProducts}</span>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-bp-green border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
+          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Total Products</span>
+          <span className="text-3xl font-extrabold tracking-tight text-slate-900 mt-2">{totalProducts}</span>
         </div>
-        <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-xs flex flex-col text-left">
-          <span className="text-xs font-semibold text-slate-400 tracking-wide">Below ROL (PR)</span>
-          <span className="text-2xl font-bold tracking-tight text-slate-900 mt-2">{atRiskCount}</span>
+        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-orange-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
+          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Below ROL (PR)</span>
+          <span className="text-3xl font-extrabold tracking-tight text-slate-900 mt-2">{atRiskCount}</span>
         </div>
-        <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-xs flex flex-col text-left">
-          <span className="text-xs font-semibold text-slate-400 tracking-wide">Stockout in 7 Days</span>
-          <span className="text-2xl font-bold tracking-tight text-slate-900 mt-2">{stockoutIn7Days}</span>
+        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-rose-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
+          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Stockout in 7 Days</span>
+          <span className="text-3xl font-extrabold tracking-tight text-rose-600 mt-2">{stockoutIn7Days}</span>
         </div>
-        <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-xs flex flex-col text-left">
-          <span className="text-xs font-semibold text-slate-400 tracking-wide">Service Level</span>
-          <span className="text-2xl font-bold tracking-tight text-bp-green mt-2">{serviceLevel}%</span>
+        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-emerald-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
+          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Service Level</span>
+          <span className="text-3xl font-extrabold tracking-tight text-emerald-600 mt-2">{serviceLevel}%</span>
         </div>
       </div>
 
       {/* Main Predictions Table */}
-      <div className="bg-white rounded-xl border border-slate-100 shadow-xs overflow-hidden text-left">
-        <div className="p-5 border-b border-slate-50">
-          <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden text-left card-hover-effect">
+        <div className="px-6 py-5 border-b border-slate-50">
+          <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
             Stockout Prediction - Store Level
           </h3>
+          <p className="text-[10px] text-slate-400 font-medium mt-0.5">Inventory timeline forecasts and automated ordering indicators</p>
         </div>
-        <div className="overflow-x-auto max-h-[500px]">
+        <div className="overflow-x-auto max-h-[500px] scrollbar-thin">
           <table className="w-full text-xs text-left">
-            <thead className="bg-slate-50 text-slate-500 tracking-wider font-semibold border-b border-slate-100 sticky top-0 z-10">
+            <thead className="bg-slate-50/50 text-slate-400 font-extrabold tracking-wider uppercase border-b border-slate-50 sticky top-0 z-10 text-[9.5px]">
               <tr>
-                <th className="py-3 px-5 font-bold bg-slate-50">Product</th>
-                <th className="py-3 px-4 text-center font-bold bg-slate-50">UOM</th>
-                <th className="py-3 px-4 text-right font-bold bg-slate-50">Current Stock</th>
-                <th className="py-3 px-4 text-right font-bold bg-slate-50">Avg Daily Consumption</th>
-                <th className="py-3 px-4 text-center font-bold bg-slate-50">Predicted Stockout Date</th>
-                <th className="py-3 px-4 text-center font-bold bg-slate-50">Days Left</th>
-                <th className="py-3 px-4 text-right font-bold bg-slate-50">ROQ (Recommended)</th>
-                <th className="py-3 px-4 text-center font-bold bg-slate-50">Order By (Recommended)</th>
-                <th className="py-3 px-4 text-center font-bold bg-slate-50">PR/MR Status</th>
-                <th className="py-3 px-5 text-center font-bold bg-slate-50">Risk Level</th>
+                <th className="py-3.5 px-6">Product</th>
+                <th className="py-3.5 px-4 text-center">UOM</th>
+                <th className="py-3.5 px-4 text-right">Current Stock</th>
+                <th className="py-3.5 px-4 text-right">Avg Daily</th>
+                <th className="py-3.5 px-4 text-center">Stockout Date</th>
+                <th className="py-3.5 px-4 text-center">Days Left</th>
+                <th className="py-3.5 px-4 text-right">ROQ</th>
+                <th className="py-3.5 px-4 text-center">Order By</th>
+                <th className="py-3.5 px-4 text-center">Status</th>
+                <th className="py-3.5 px-6 text-center">Risk Level</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 font-medium text-slate-600">
+            <tbody className="divide-y divide-slate-100/60 font-semibold text-slate-700">
               {filteredInventory.map((row, idx) => {
                 const daysLeft = calcDays(row.predictedStockoutDate);
                 const recalcRisk = calcRisk(daysLeft);
                 const riskColor =
                   recalcRisk === "High"
-                    ? "text-rose-600 bg-rose-50/70 border-rose-100"
+                    ? "text-rose-600 bg-rose-50 border-rose-100"
                     : recalcRisk === "Medium"
-                    ? "text-amber-600 bg-amber-50/70 border-amber-100"
-                    : "text-emerald-600 bg-emerald-50/70 border-emerald-100";
+                    ? "text-amber-600 bg-amber-50 border-amber-100"
+                    : "text-emerald-600 bg-emerald-50 border-emerald-100";
 
                 // Order by date urgency using actual today
                 const orderParts = row.orderByDate.split("-");
@@ -271,19 +272,18 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
                 const orderDiff = orderDate ? Math.round((orderDate.getTime() - TODAY.getTime()) / 86400000) : 999;
                 const isOverdue = orderDiff < 0;
                 const isToday = orderDiff === 0;
-                const isUrgent = orderDiff > 0 && orderDiff <= 3;
 
                 return (
-                  <tr key={idx} className="hover:bg-slate-50/40 transition duration-75">
-                    <td className="py-3.5 px-5 font-semibold text-bp-green cursor-pointer hover:underline"
+                  <tr key={idx} className="hover:bg-slate-50/50 transition duration-75">
+                    <td className="py-4 px-6 font-bold text-bp-green hover:text-bp-green-dark cursor-pointer"
                       onClick={() => onNavigate("3", "product_wise", undefined, row.code)}
                     >
                       {row.name}
                     </td>
-                    <td className="py-3.5 px-4 text-center text-slate-400 font-normal">{row.uom}</td>
-                    <td className="py-3.5 px-4 text-right font-normal text-slate-700">{row.currentStock}</td>
-                    <td className="py-3.5 px-4 text-right font-normal text-slate-500">{row.avgDailyConsumption}</td>
-                    <td className="py-3.5 px-4 text-center">
+                    <td className="py-4 px-4 text-center text-slate-400 font-medium">{row.uom}</td>
+                    <td className="py-4 px-4 text-right text-slate-655 font-normal">{row.currentStock}</td>
+                    <td className="py-4 px-4 text-right text-slate-500 font-medium">{row.avgDailyConsumption}</td>
+                    <td className="py-4 px-4 text-center">
                       <div className={`font-bold ${
                         daysLeft <= 3 ? "text-rose-600" :
                         daysLeft <= 7 ? "text-amber-600" :
@@ -297,21 +297,21 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
                           return `${parts[0]} ${mName} ${parts[2]}`;
                         })()}
                       </div>
-                      <div className="text-[10px] text-slate-400 font-normal mt-0.5">
+                      <div className="text-[10px] text-slate-400 font-medium mt-0.5">
                         ({daysLeft} {daysLeft === 1 ? "day" : "days"} left)
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 text-center">
-                      <span className={`font-bold text-sm ${
+                    <td className="py-4 px-4 text-center">
+                      <span className={`font-extrabold text-sm ${
                         daysLeft <= 3 ? "text-rose-600" :
                         daysLeft <= 7 ? "text-amber-600" :
                         daysLeft <= 15 ? "text-slate-700" :
                         "text-emerald-600"
                       }`}>{daysLeft}</span>
                     </td>
-                    <td className="py-3.5 px-4 text-right font-semibold text-bp-green">{row.recommendedRoq}</td>
-                    <td className="py-3.5 px-4 text-center">
-                      <div className={`font-semibold ${isOverdue ? "text-rose-600" : isToday ? "text-amber-600" : "text-slate-800"}`}>
+                    <td className="py-4 px-4 text-right font-bold text-bp-green">{row.recommendedRoq}</td>
+                    <td className="py-4 px-4 text-center">
+                      <div className={`font-bold ${isOverdue ? "text-rose-600" : isToday ? "text-amber-600" : "text-slate-800"}`}>
                         {(() => {
                           const parts = row.orderByDate.split("-");
                           if (parts.length !== 3) return row.orderByDate;
@@ -320,21 +320,21 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
                           return `${parts[0]} ${mName} ${parts[2]}`;
                         })()}
                       </div>
-                      <div className="text-[10px] text-slate-400 font-normal mt-0.5">
-                        ({row.leadTimeDays} {row.leadTimeDays === 1 ? "day" : "days"} before stockout)
+                      <div className="text-[10px] text-slate-400 font-medium mt-0.5">
+                        ({row.leadTimeDays} {row.leadTimeDays === 1 ? "day" : "days"} lead time)
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 text-center">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                    <td className="py-4 px-4 text-center">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${
                         row.prMrStatus === "PR" ? "bg-rose-50 text-rose-600 border-rose-100" :
                         row.prMrStatus === "MR" ? "bg-amber-50 text-amber-600 border-amber-100" :
-                        "bg-slate-50 text-slate-400 border-slate-100"
+                        "bg-slate-50 text-slate-400 border-slate-150"
                       }`}>
                         {row.prMrStatus}
                       </span>
                     </td>
-                    <td className="py-3.5 px-5 text-center">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border uppercase tracking-wider inline-flex items-center gap-1.5 ${riskColor}`}>
+                    <td className="py-4 px-5 text-center">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold border uppercase tracking-wider inline-flex items-center gap-1.5 ${riskColor}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${
                           recalcRisk === "High" ? "bg-rose-500" :
                           recalcRisk === "Medium" ? "bg-amber-500" :
@@ -351,7 +351,7 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
         </div>
 
         {/* Legend Footer */}
-        <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-[10px] font-semibold text-slate-400">
+        <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-[10px] font-bold text-slate-400">
           <div className="flex flex-wrap items-center gap-4">
             <span className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
@@ -367,7 +367,7 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
             </span>
           </div>
           <div className="text-slate-400">
-            <span className="font-bold text-slate-500">PR:</span> Purchase Required | <span className="font-bold text-slate-500">MR:</span> Monitor &amp; Reorder
+            <span className="font-extrabold text-slate-500">PR:</span> Purchase Required | <span className="font-extrabold text-slate-500">MR:</span> Monitor &amp; Reorder
           </div>
         </div>
       </div>

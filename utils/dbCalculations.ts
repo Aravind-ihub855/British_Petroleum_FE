@@ -74,6 +74,9 @@ export function generateDBProcurementData(stores: Store[], vendors: Vendor[]) {
         actualDate = actual.toISOString().split("T")[0];
       }
       
+      const expectedItems = 50 + (pSeed % 100);
+      const receivedItems = status === "Delivered" ? expectedItems : 0;
+
       purchaseOrders.push({
         id: `PO-${10000 + vIdx * 100 + i}`,
         vendorId: vendor.id,
@@ -82,7 +85,9 @@ export function generateDBProcurementData(stores: Store[], vendors: Vendor[]) {
         expectedDeliveryDate: expectedDate.toISOString().split("T")[0],
         actualDeliveryDate: actualDate,
         amount: 2500 + (pSeed % 15000),
-        status: status as any
+        status: status as any,
+        expectedItems,
+        receivedItems
       });
     }
   });
@@ -125,7 +130,7 @@ export function generateDBProcurementData(stores: Store[], vendors: Vendor[]) {
 
   // Generate some realistic Vendor Issues based on vendors
   const issueTypes = ["Delivery delayed by 2 days", "Fill Rate below SLA", "Invoice mismatch", "Quality control failure", "Missing documentation"];
-  const severities = ["High", "Medium", "Low", "Critical", "Medium"];
+  const severities = ["High", "Medium", "Low", "High", "Medium"];
   
   vendors.forEach((vendor, vIdx) => {
     const seed = getSeedHash(vendor.id + "issue");
@@ -137,11 +142,10 @@ export function generateDBProcurementData(stores: Store[], vendors: Vendor[]) {
         vendorId: vendor.id,
         vendorName: vendor.name,
         issueType: issueTypes[issueIdx],
-        description: `Vendor has reported ${issueTypes[issueIdx].toLowerCase()}.`,
         dateReported: new Date(today.getTime() - (seed % 5) * 86400000).toISOString().split("T")[0],
         status: (seed % 4 === 0) ? "Resolved" : "Open",
         priority: severities[issueIdx] as any,
-        relatedPO: `PO-${10000 + vIdx * 100}`
+        assignedTo: "Procurement Team"
       });
     }
   });
@@ -193,7 +197,6 @@ export function getProductsForVendorDB(masterProducts: Product[], vendorId: stri
       const p = masterProducts[pIdx];
       const seed = getSeedHash(vendorId + p.code);
       productLinks.push({
-        productId: p.id,
         productCode: p.code,
         productName: p.name,
         category: p.category,
@@ -201,7 +204,7 @@ export function getProductsForVendorDB(masterProducts: Product[], vendorId: stri
         unitCost: p.unitPrice ? parseFloat((p.unitPrice * (0.8 + (seed % 40) / 100)).toFixed(2)) : (1.5 + (seed % 10)),
         deliveryTime: `${1 + (seed % 5)} Days`,
         isSoleSource: seed % 4 === 0,
-        fsnClass: p.code === "BP-PROD-001" ? "Fast" : (seed % 2 === 0 ? "Normal" : "Slow"),
+        fsnClass: p.code === "BP-PROD-001" ? "Fast" : (seed % 2 === 0 ? "Non-moving" : "Slow"),
         deliveriesCount: 20 + (seed % 100),
         overallScore: parseFloat((8.0 + (seed % 20) / 10).toFixed(1)),
         spend: 5000 + (seed % 20000),

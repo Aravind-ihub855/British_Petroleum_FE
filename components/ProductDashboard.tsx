@@ -60,24 +60,24 @@ export default function ProductDashboard({ onNavigate }: ProductDashboardProps) 
   const stockoutIn7Days = carryingStores.filter((s) => s.riskLevel === "High").length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-fadeIn">
       
       {/* Top Filter Controls */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-5 rounded-xl border border-slate-100 shadow-xs">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm card-hover-effect text-left">
         <div>
-          <h2 className="text-sm font-bold text-slate-800">
+          <h2 className="text-sm font-extrabold text-slate-900 tracking-tight">
             Item / Product Analysis
           </h2>
-          <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+          <p className="text-[10px] text-slate-400 font-semibold mt-0.5 leading-snug">
             Select a product category to review outlet allocations.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-slate-500">Select Product</span>
+        <div className="flex items-center gap-2.5">
+          <span className="text-xs font-bold text-slate-500">Select Product</span>
           <select
             value={selectedProductCode}
             onChange={(e) => setSelectedProductCode(e.target.value)}
-            className="bg-white border border-slate-200 text-xs font-semibold text-slate-700 py-1.5 px-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-bp-green transition duration-150 shadow-xs max-w-xs"
+            className="bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 py-2 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-bp-green transition duration-150 shadow-sm max-w-xs"
           >
             {masterProducts.map((p) => (
               <option key={p.code} value={p.code}>
@@ -89,63 +89,66 @@ export default function ProductDashboard({ onNavigate }: ProductDashboardProps) 
       </div>
 
       {/* KPI Cards Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-xs flex flex-col text-left">
-          <span className="text-xs font-semibold text-slate-400 tracking-wide">Total Stores Carrying</span>
-          <span className="text-2xl font-bold tracking-tight text-slate-900 mt-2">{totalCarrying}</span>
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-5">
+        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-bp-green border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
+          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Stores Carrying</span>
+          <span className="text-3xl font-extrabold tracking-tight text-slate-900 mt-2">{totalCarrying}</span>
         </div>
-        <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-xs flex flex-col text-left">
-          <span className="text-xs font-semibold text-slate-400 tracking-wide">Total Current Stock</span>
-          <span className="text-2xl font-bold tracking-tight text-slate-900 mt-2">
-            {totalStock.toLocaleString()} {activeProduct.uom === "Litres" ? "Ltr" : activeProduct.uom === "Kilograms" ? "Kg" : "Pcs"}
+        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-bp-green border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
+          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Total Current Stock</span>
+          <span className="text-3xl font-extrabold tracking-tight text-slate-900 mt-2">
+            {totalStock.toLocaleString()} <span className="text-xs font-bold text-slate-400 ml-0.5">{activeProduct.uom === "Litres" ? "Ltr" : activeProduct.uom === "Kilograms" ? "Kg" : "Pcs"}</span>
           </span>
         </div>
-        <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-xs flex flex-col text-left">
-          <span className="text-xs font-semibold text-slate-400 tracking-wide">Total ROQ (Recommended)</span>
-          <span className="text-2xl font-bold tracking-tight text-slate-900 mt-2">
-            {totalRoq.toLocaleString()} {activeProduct.uom === "Litres" ? "Ltr" : activeProduct.uom === "Kilograms" ? "Kg" : "Pcs"}
+        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-bp-yellow border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
+          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Total ROQ</span>
+          <span className="text-3xl font-extrabold tracking-tight text-slate-900 mt-2">
+            {totalRoq.toLocaleString()} <span className="text-xs font-bold text-slate-400 ml-0.5">{activeProduct.uom === "Litres" ? "Ltr" : activeProduct.uom === "Kilograms" ? "Kg" : "Pcs"}</span>
           </span>
         </div>
-        <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-xs flex flex-col text-left">
-          <span className="text-xs font-semibold text-slate-400 tracking-wide">Stores at Risk</span>
-          <span className="text-2xl font-bold tracking-tight text-rose-600 mt-2">{storesAtRisk}</span>
+        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-rose-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
+          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Stores at Risk</span>
+          <span className="text-3xl font-extrabold tracking-tight text-rose-600 mt-2">{storesAtRisk}</span>
         </div>
-        <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-xs flex flex-col text-left col-span-2 lg:col-span-1">
-          <span className="text-xs font-semibold text-slate-400 tracking-wide">Stockout in 7 Days</span>
-          <span className="text-2xl font-bold tracking-tight text-rose-600 mt-2">{stockoutIn7Days}</span>
+        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-rose-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect col-span-2 lg:col-span-1">
+          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Stockout in 7 Days</span>
+          <span className="text-3xl font-extrabold tracking-tight text-rose-600 mt-2">{stockoutIn7Days}</span>
         </div>
       </div>
 
       {/* Main Predictions Table */}
-      <div className="bg-white rounded-xl border border-slate-100 shadow-xs overflow-hidden text-left">
-        <div className="p-5 border-b border-slate-50 flex items-center justify-between">
-          <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-            Store-wise Stockout Prediction - {activeProduct.name}
-          </h3>
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden text-left card-hover-effect">
+        <div className="px-6 py-5 border-b border-slate-50 flex items-center justify-between">
+          <div>
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+              Store-wise Stockout Prediction - {activeProduct.name}
+            </h3>
+            <p className="text-[10px] text-slate-400 font-medium mt-0.5">Location inventory levels and direct sourcing shortcut options</p>
+          </div>
           <button
             onClick={() => onNavigate("3", "product_wise", undefined, activeProduct.code)}
-            className="text-xs font-bold text-bp-green hover:underline"
+            className="text-xs font-extrabold text-bp-green hover:text-bp-green-dark"
           >
             Analyze Sourcing Vendors
           </button>
         </div>
-        <div className="overflow-x-auto max-h-[450px]">
+        <div className="overflow-x-auto max-h-[450px] scrollbar-thin">
           <table className="w-full text-xs text-left">
-            <thead className="bg-slate-50 text-slate-500 tracking-wider font-semibold border-b border-slate-100 sticky top-0 z-10">
+            <thead className="bg-slate-50/50 text-slate-400 font-extrabold tracking-wider uppercase border-b border-slate-50 sticky top-0 z-10 text-[9.5px]">
               <tr>
-                <th className="py-3 px-5 font-bold bg-slate-50">Store ID</th>
-                <th className="py-3 px-4 font-bold bg-slate-50">Store Name</th>
-                <th className="py-3 px-4 font-bold bg-slate-50">City</th>
-                <th className="py-3 px-4 text-right font-bold bg-slate-50">Current Stock</th>
-                <th className="py-3 px-4 text-right font-bold bg-slate-50">Avg Daily Consumption</th>
-                <th className="py-3 px-4 text-center font-bold bg-slate-50">Predicted Stockout Date</th>
-                <th className="py-3 px-4 text-right font-bold bg-slate-50">ROQ</th>
-                <th className="py-3 px-4 text-center font-bold bg-slate-50">Order Recommendation</th>
-                <th className="py-3 px-4 text-center font-bold bg-slate-50">PR/MR Status</th>
-                <th className="py-3 px-5 text-center font-bold bg-slate-50">Risk Level</th>
+                <th className="py-3.5 px-6">Store ID</th>
+                <th className="py-3.5 px-4">Store Name</th>
+                <th className="py-3.5 px-4">City</th>
+                <th className="py-3.5 px-4 text-right">Current Stock</th>
+                <th className="py-3.5 px-4 text-right">Avg Daily</th>
+                <th className="py-3.5 px-4 text-center">Predicted Stockout Date</th>
+                <th className="py-3.5 px-4 text-right">ROQ</th>
+                <th className="py-3.5 px-4 text-center">Order Recommendation</th>
+                <th className="py-3.5 px-4 text-center">PR/MR Status</th>
+                <th className="py-3.5 px-6 text-center">Risk Level</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 font-medium text-slate-600">
+            <tbody className="divide-y divide-slate-100/60 font-semibold text-slate-700">
               {carryingStores.map((row, idx) => {
                 const riskColor =
                   row.riskLevel === "High"
@@ -155,30 +158,34 @@ export default function ProductDashboard({ onNavigate }: ProductDashboardProps) 
                     : "text-emerald-600 bg-emerald-50 border-emerald-100";
 
                 return (
-                  <tr key={idx} className="hover:bg-slate-50/40 transition duration-75">
-                    <td className="py-3.5 px-5 font-semibold text-bp-green cursor-pointer hover:underline"
+                  <tr key={idx} className="hover:bg-slate-50/50 transition duration-75">
+                    <td className="py-4 px-6 font-bold text-bp-green hover:text-bp-green-dark cursor-pointer"
                       onClick={() => onNavigate("2", "store", undefined, undefined)}
                     >
                       {row.storeId}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-400 font-normal">{row.storeName}</td>
-                    <td className="py-3.5 px-4 text-slate-700 font-normal">{row.city}</td>
-                    <td className="py-3.5 px-4 text-right font-normal text-slate-700">{row.currentStock}</td>
-                    <td className="py-3.5 px-4 text-right font-normal text-slate-500">{row.avgConsumption}</td>
-                    <td className="py-3.5 px-4 text-center font-medium text-slate-800">{row.predictedStockoutDate}</td>
-                    <td className="py-3.5 px-4 text-right font-semibold text-bp-green">{row.roq}</td>
-                    <td className="py-3.5 px-4 text-center font-medium text-slate-800">{row.orderByDate}</td>
-                    <td className="py-3.5 px-4 text-center">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                    <td className="py-4 px-4 text-slate-900 font-bold">{row.storeName}</td>
+                    <td className="py-4 px-4 text-slate-500 font-medium">{row.city}</td>
+                    <td className="py-4 px-4 text-right text-slate-755 font-normal">{row.currentStock}</td>
+                    <td className="py-4 px-4 text-right text-slate-500 font-medium">{row.avgConsumption}</td>
+                    <td className="py-4 px-4 text-center">
+                      <div className="font-bold text-slate-800">
+                        {row.predictedStockoutDate}
+                      </div>
+                    </td>
+                    <td className="py-4 px-4 text-right font-bold text-bp-green">{row.roq}</td>
+                    <td className="py-4 px-4 text-center font-bold text-slate-800">{row.orderByDate}</td>
+                    <td className="py-4 px-4 text-center">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${
                         row.prMrStatus === "PR" ? "bg-rose-50 text-rose-600 border-rose-100" :
                         row.prMrStatus === "MR" ? "bg-amber-50 text-amber-600 border-amber-100" :
-                        "bg-slate-50 text-slate-400 border-slate-100"
+                        "bg-slate-50 text-slate-400 border-slate-150"
                       }`}>
                         {row.prMrStatus}
                       </span>
                     </td>
-                    <td className="py-3.5 px-5 text-center">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border uppercase tracking-wider inline-flex items-center gap-1.5 ${riskColor}`}>
+                    <td className="py-4 px-6 text-center">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold border uppercase tracking-wider inline-flex items-center gap-1.5 ${riskColor}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${
                           row.riskLevel === "High" ? "bg-rose-500" :
                           row.riskLevel === "Medium" ? "bg-amber-500" :
@@ -195,8 +202,10 @@ export default function ProductDashboard({ onNavigate }: ProductDashboardProps) 
         </div>
 
         {/* View All Stores trigger bar */}
-        <div className="p-4 bg-slate-50/20 border-t border-slate-100 flex items-center justify-end text-xs font-bold text-bp-green">
-          <button className="hover:underline transition duration-150">
+        <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-end text-xs font-bold text-bp-green">
+          <button className="hover:text-bp-green-dark transition duration-150 cursor-pointer"
+            onClick={() => onNavigate("2", "store", undefined, undefined)}
+          >
             View All Stores
           </button>
         </div>

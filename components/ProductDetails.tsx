@@ -504,12 +504,12 @@ export default function ProductDetails({ productCode, onBack }: ProductDetailsPr
         </div>
       </div>
 
-      <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm text-left">
+      {/* <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm text-left">
         <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
           Notes
         </h3>
         <p className="text-xs font-medium text-slate-500">-</p>
-      </div>
+      </div> */}
 
     </div>
   );

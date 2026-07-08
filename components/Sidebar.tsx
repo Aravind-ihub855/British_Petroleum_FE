@@ -134,22 +134,24 @@ export default function Sidebar({
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-50 w-64 min-w-[256px] bg-white border-r border-slate-200/80 flex flex-col justify-between h-screen transition-transform duration-300 transform lg:translate-x-0 lg:static lg:flex-shrink-0 sticky top-0`}
+      className={`fixed inset-y-0 left-0 z-50 w-64 min-w-[256px] bg-[#052416] border-r border-emerald-950/60 flex flex-col justify-between h-screen transition-transform duration-300 transform lg:translate-x-0 lg:static lg:flex-shrink-0 sticky top-0`}
       style={{ transform: isOpen ? "translateX(0)" : undefined }}
     >
       <div className="flex flex-col overflow-hidden h-[calc(100vh-88px)]">
         {/* Logo Brand Header */}
-        <div className="p-6 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center gap-2.5">
-            <img src="/logo/BP.svg" alt="BP Logo" className="w-6.5 h-6.5 object-contain" />
-            <span className="font-extrabold text-sm text-slate-900 tracking-tight font-sans">
+        <div className="p-6 border-b border-emerald-900/30 flex items-center justify-between flex-shrink-0 bg-[#031d11]">
+          <div className="flex items-center gap-3">
+            <div className="relative w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center p-1.5 border border-white/5 shadow-inner">
+              <img src="/logo/BP.svg" alt="BP Logo" className="w-full h-full object-contain" />
+            </div>
+            <span className="font-extrabold text-sm text-white tracking-tight font-sans">
               BP Convenience
             </span>
           </div>
           {/* Mobile close button */}
           <button
             onClick={onClose}
-            className="lg:hidden p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition duration-150"
+            className="lg:hidden p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition duration-150"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -158,13 +160,13 @@ export default function Sidebar({
         </div>
 
         {/* Scrollable Navigation section */}
-        <nav className="p-4 space-y-1 overflow-y-auto flex-grow scrollbar-thin">
+        <nav className="p-4 space-y-1.5 overflow-y-auto flex-grow scrollbar-thin">
           {/* CORE PLATFORM section */}
           {coreItems.length > 0 && (
             <>
-              <div className="px-3 py-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <div className="px-3 py-2 text-[10px] font-extrabold text-emerald-500 uppercase tracking-widest flex items-center gap-2">
                 <span>Core Platform</span>
-                <span className="flex-grow h-px bg-slate-100" />
+                <span className="flex-grow h-px bg-emerald-900/30" />
               </div>
               {coreItems.map((item) => {
                 const isSelected = activeTab === item.id;
@@ -175,13 +177,13 @@ export default function Sidebar({
                       setActiveTab(item.id);
                       onClose();
                     }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition duration-150 font-semibold text-sm text-left border-2 outline-none focus-visible:ring-2 focus-visible:ring-bp-green/50 ${
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition duration-150 font-semibold text-sm text-left border-l-4 outline-none ${
                       isSelected
-                        ? "bg-bp-green/5 border-bp-green text-slate-900 shadow-sm"
-                        : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                        ? "bg-white/10 border-bp-yellow text-white shadow-sm"
+                        : "border-transparent text-slate-400 hover:text-white hover:bg-white/5"
                     }`}
                   >
-                    <span className={`${isSelected ? "text-bp-green" : "text-slate-400"}`}>
+                    <span className={`${isSelected ? "text-bp-yellow" : "text-slate-500"}`}>
                       {item.icon}
                     </span>
                     <span>
@@ -196,9 +198,9 @@ export default function Sidebar({
           {/* SYSTEM & REPORTS section */}
           {systemItems.length > 0 && (
             <>
-              <div className="px-3 py-2.5 mt-4 text-[9px] font-extrabold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <div className="px-3 py-2.5 mt-4 text-[9px] font-extrabold text-emerald-500 uppercase tracking-widest flex items-center gap-2">
                 <span>System & Reports</span>
-                <span className="flex-grow h-px bg-slate-100" />
+                <span className="flex-grow h-px bg-emerald-900/30" />
               </div>
               {systemItems.map((item) => {
                 const isSelected = activeTab === item.id;
@@ -209,13 +211,13 @@ export default function Sidebar({
                       setActiveTab(item.id);
                       onClose();
                     }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition duration-150 font-semibold text-sm text-left border-2 outline-none focus-visible:ring-2 focus-visible:ring-bp-green/50 ${
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition duration-150 font-semibold text-sm text-left border-l-4 outline-none ${
                       isSelected
-                        ? "bg-bp-green/5 border-bp-green text-slate-900 shadow-sm"
-                        : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                        ? "bg-white/10 border-bp-yellow text-white shadow-sm"
+                        : "border-transparent text-slate-400 hover:text-white hover:bg-white/5"
                     }`}
                   >
-                    <span className={`${isSelected ? "text-bp-green" : "text-slate-400"}`}>
+                    <span className={`${isSelected ? "text-bp-yellow" : "text-slate-500"}`}>
                       {item.icon}
                     </span>
                     <span>
@@ -230,20 +232,20 @@ export default function Sidebar({
 
         {/* Store Information Box (only for Store Manager) */}
         {user.role === "store manager" && user.storeId && (
-          <div className="mx-4 my-3 p-4 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-left">
-            <h3 className="text-bp-green font-bold mb-3 uppercase tracking-wider text-[9px]">Store Information</h3>
+          <div className="mx-4 my-3 p-4 bg-white/5 border border-white/10 rounded-2xl text-[11px] text-left text-white/90">
+            <h3 className="text-bp-yellow font-extrabold mb-3 uppercase tracking-wider text-[9.5px]">Store Information</h3>
             <div className="space-y-2.5">
               <div className="flex justify-between">
-                <span className="text-slate-400 font-medium">Location</span>
-                <span className="text-slate-700 font-bold">North America</span>
+                <span className="text-slate-400 font-semibold">Location</span>
+                <span className="text-white font-bold">North America</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400 font-medium">City</span>
-                <span className="text-slate-700 font-bold">{stores.find(s => s.id === user.storeId)?.city || "Chicago"}</span>
+                <span className="text-slate-400 font-semibold">City</span>
+                <span className="text-white font-bold">{stores.find(s => s.id === user.storeId)?.city || "Chicago"}</span>
               </div>
               <div className="flex justify-between gap-2 overflow-hidden">
-                <span className="text-slate-400 font-medium whitespace-nowrap">Store</span>
-                <span className="text-slate-700 font-bold truncate" title={storeName}>
+                <span className="text-slate-400 font-semibold whitespace-nowrap">Store</span>
+                <span className="text-white font-bold truncate" title={storeName}>
                   BP ({storeName || user.storeId})
                 </span>
               </div>
@@ -253,17 +255,17 @@ export default function Sidebar({
       </div>
 
       {/* User profile footer block: locked to the very bottom */}
-      <div className="p-4 border-t border-slate-100 bg-white flex-shrink-0 h-[88px] flex items-center justify-between">
+      <div className="p-4 border-t border-emerald-900/30 bg-[#031d11] flex-shrink-0 h-[88px] flex items-center justify-between">
         <div className="flex items-center gap-3 overflow-hidden">
           {/* Colorful/BP styled round avatar */}
-          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#008751] to-emerald-500 flex items-center justify-center font-bold text-xs text-white flex-shrink-0 shadow-sm">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#008751] to-emerald-500 flex items-center justify-center font-bold text-xs text-white flex-shrink-0 shadow-md">
             {user.name ? user.name.charAt(0).toUpperCase() : "U"}
           </div>
           <div className="flex flex-col text-left overflow-hidden">
-            <span className="text-xs font-bold text-slate-800 truncate leading-none">{user.name}</span>
+            <span className="text-xs font-bold text-white truncate leading-none">{user.name}</span>
             <span className="text-[10px] text-slate-400 font-semibold truncate mt-1">{user.role || "User"}</span>
             {user.role === "store manager" && user.storeId && (
-              <span className="text-[9px] text-bp-green font-bold truncate mt-0.5" title={`${storeName} (${user.storeId})`}>
+              <span className="text-[9px] text-bp-yellow font-bold truncate mt-0.5" title={`${storeName} (${user.storeId})`}>
                 {storeName || "Store"}: {user.storeId}
               </span>
             )}
@@ -272,7 +274,7 @@ export default function Sidebar({
         
         <button
           onClick={logout}
-          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition duration-150 flex-shrink-0"
+          className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-950/20 rounded-lg transition duration-150 flex-shrink-0"
           title="Sign Out"
         >
           <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
