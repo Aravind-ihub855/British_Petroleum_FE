@@ -68,6 +68,22 @@ export default function VendorPerformance({
     : 2.5;
   const totalSpend = vendorProducts.reduce((sum, p) => sum + p.spend, 0);
 
+  let costCompliance = 100;
+  if (vendorProducts.length > 0) {
+    const compliances = vendorProducts.map(vp => {
+      const p = masterProducts.find(m => m.code === vp.productCode);
+      if (!p || vp.unitCost <= p.unitPrice) return 100;
+      return (p.unitPrice / vp.unitCost) * 100;
+    });
+    costCompliance = parseFloat((compliances.reduce((a,b)=>a+b,0)/compliances.length).toFixed(1));
+  }
+
+  // Generate deterministic YoY change based on vendor ID for a stable UI
+  const yoyScoreRaw = activeVendor ? (((activeVendor.id.charCodeAt(activeVendor.id.length - 1) || 0) % 10) - 3) : 0;
+  const yoyScoreChange = yoyScoreRaw === 0 ? 1.2 : parseFloat((yoyScoreRaw * 1.4).toFixed(1));
+  const yoyColor = yoyScoreChange > 0 ? "text-emerald-600" : yoyScoreChange < 0 ? "text-rose-600" : "text-slate-500";
+  const yoySign = yoyScoreChange > 0 ? "▲ +" : yoyScoreChange < 0 ? "▼ " : "";
+
   // Band calculations
   const vendorBand = vendorOverallScore >= 9.0 ? "A" : vendorOverallScore >= 8.0 ? "B" : "C";
 
@@ -322,18 +338,15 @@ export default function VendorPerformance({
             </div>
           </div>
 
-          {/* Main Table: Products Supplied */}
-          <div className="bg-white rounded-3xl border-t-4 border-t-bp-green border-x border-b border-slate-100 shadow-sm overflow-hidden text-left card-hover-effect">
-            <div className="px-6 py-5 border-b border-slate-50 flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider font-sans">
-                  Products Supplied by {activeVendor.name}
-                </h3>
-                <p className="text-[10px] text-slate-400 font-medium mt-0.5">Summary values of products supplied to target convenience warehouses</p>
-              </div>
-              <div className="flex gap-2 text-xs font-bold">
-                <span className="text-slate-400">YoY score change:</span>
-                <span className="text-emerald-600">▲ +4.2%</span>
+          {/* Main Table: Products Supplied (with wide row paddings) */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-xs overflow-hidden text-left">
+            <div className="p-6 border-b border-slate-50 flex items-center justify-between">
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                Products Supplied by {activeVendor.name}
+              </h3>
+              <div className="flex gap-2">
+                <span className="text-xs font-bold text-slate-400">YoY score change:</span>
+                <span className={`text-xs font-bold ${yoyColor}`}>{yoySign}{yoyScoreChange}%</span>
               </div>
             </div>
             <div className="overflow-x-auto max-h-[500px] scrollbar-thin">
@@ -353,10 +366,16 @@ export default function VendorPerformance({
                     <th className="py-4 px-6 text-center">Overall Score</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100/60 font-semibold text-slate-700">
-                  {vendorProducts.map((row, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50/50 transition duration-75">
-                      <td className="py-4.5 px-6 font-bold text-bp-green cursor-pointer hover:text-bp-green-dark"
+                <tbody className="divide-y divide-slate-100 font-medium text-slate-600">
+                  {vendorProducts.map((row, idx) => {
+                    const activeProd = masterProducts.find(m => m.code === row.productCode);
+                    const marketPrice = activeProd ? activeProd.unitPrice : row.unitCost;
+                    const priceDiff = row.unitCost - marketPrice;
+                    const priceDiffPct = marketPrice > 0 ? Math.round((priceDiff / marketPrice) * 100) : 0;
+                    
+                    return (
+                    <tr key={idx} className="hover:bg-slate-50/40 transition duration-75">
+                      <td className="py-4.5 px-6 font-semibold text-bp-green cursor-pointer hover:underline"
                         onClick={() => {
                           setSelectedProductCode(row.productCode);
                           setSubTab("product_wise");
@@ -364,11 +383,17 @@ export default function VendorPerformance({
                       >
                         {row.productName}
                       </td>
-                      <td className="py-4.5 px-4 text-center text-slate-400 font-medium">{row.uom}</td>
-                      <td className="py-4.5 px-4 text-center text-slate-400 font-medium">{row.category}</td>
-                      <td className="py-4.5 px-4 text-right text-slate-900">${row.unitCost.toFixed(2)}</td>
-                      <td className="py-4.5 px-4 text-center">
-                        {(idx % 3 === 0) ? <span className="text-rose-600 font-bold">+$0.15 (+2%)</span> : <span className="text-emerald-600 font-bold">-$0.30 (-4%)</span>}
+                      <td className="py-4.5 px-4 text-center text-slate-400">{row.uom}</td>
+                      <td className="py-4.5 px-4 text-center text-slate-400">{row.category}</td>
+                      <td className="py-4.5 px-4 text-right font-normal text-slate-700">${row.unitCost.toFixed(2)}</td>
+                      <td className="py-4.5 px-4 text-center font-normal">
+                        {priceDiff > 0 ? (
+                          <span className="text-rose-600 font-bold">+${priceDiff.toFixed(2)} (+{priceDiffPct}%)</span>
+                        ) : priceDiff < 0 ? (
+                          <span className="text-emerald-600 font-bold">-${Math.abs(priceDiff).toFixed(2)} ({priceDiffPct}%)</span>
+                        ) : (
+                          <span className="text-slate-400">-</span>
+                        )}
                       </td>
                       <td className="py-4.5 px-4 text-center text-slate-500 font-medium">{row.deliveryTime}d</td>
                       <td className="py-4.5 px-4 text-center text-slate-700">{row.onTimePercent}%</td>
@@ -397,7 +422,8 @@ export default function VendorPerformance({
                         </span>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
