@@ -2,13 +2,16 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
-import { Store, Vendor, Product, InventoryItem } from "@/utils/mockDb";
+import { Store, Vendor, Product, InventoryItem, PurchaseOrder, VendorIssue, AIRecommendation } from "@/utils/mockDb";
 
 interface DataContextType {
   stores: Store[];
   masterProducts: Product[];
   vendors: Vendor[];
   allInventory: InventoryItem[];
+  purchaseOrders: PurchaseOrder[];
+  vendorIssues: VendorIssue[];
+  recommendations: AIRecommendation[];
   loading: boolean;
   refreshData: () => Promise<void>;
   getStoreInventory: (storeId: string) => InventoryItem[];
@@ -29,6 +32,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [masterProducts, setMasterProducts] = useState<Product[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [allInventory, setAllInventory] = useState<InventoryItem[]>([]);
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+  const [vendorIssues, setVendorIssues] = useState<VendorIssue[]>([]);
+  const [recommendations, setRecommendations] = useState<AIRecommendation[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -39,6 +45,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       setMasterProducts([]);
       setVendors([]);
       setAllInventory([]);
+      setPurchaseOrders([]);
+      setVendorIssues([]);
+      setRecommendations([]);
       setLoading(false);
       return;
     }
@@ -69,18 +78,50 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       });
       const inventoryData = inventoryRes.ok ? await inventoryRes.json() : [];
 
-      setStores(storesData);
+      // 5. Fetch Procurement Data
+      const poRes = await fetch(`${API_URL}/api/data/purchase-orders`, { headers: { Authorization: `Bearer ${token}` } });
+      const poData = poRes.ok ? await poRes.json() : [];
       
-      let finalProducts = productsData;
+      const issuesRes = await fetch(`${API_URL}/api/data/vendor-issues`, { headers: { Authorization: `Bearer ${token}` } });
+      const issuesData = issuesRes.ok ? await issuesRes.json() : [];
+      
+      const recsRes = await fetch(`${API_URL}/api/data/recommendations`, { headers: { Authorization: `Bearer ${token}` } });
+      const recsData = recsRes.ok ? await recsRes.json() : [];
+
+      // Global Region Filter
+      let scopedStores = storesData;
+      let scopedVendors = vendorsData;
+      
+      if (user?.region) {
+        const userRegion = user.region.toLowerCase();
+        scopedStores = storesData.filter((s: any) => s.city.toLowerCase() === userRegion);
+        scopedVendors = vendorsData.filter((v: any) => v.city.toLowerCase() === userRegion);
+      }
+      
+      const scopedStoreIds = new Set(scopedStores.map((s: any) => s.id));
+      const scopedInventory = inventoryData.filter((i: any) => scopedStoreIds.has(i.storeId));
+      
+      const scopedVendorIds = new Set(scopedVendors.map((v: any) => v.id));
+      let finalProducts = productsData.filter((p: any) => scopedVendorIds.has(p.vendorId));
+      
       if (user?.role === "store manager" && user?.storeId) {
-        const managerStore = storesData.find((s: any) => s.id === user.storeId);
+        const managerStore = scopedStores.find((s: any) => s.id === user.storeId);
         if (managerStore && managerStore.products) {
-          finalProducts = productsData.filter((p: any) => managerStore.products[p.code]);
+          finalProducts = finalProducts.filter((p: any) => managerStore.products[p.code]);
         }
       }
+      
+      // Filter procurement data to scoped vendors
+      const scopedPOs = poData.filter((po: any) => scopedVendorIds.has(po.vendorId));
+      const scopedIssues = issuesData.filter((i: any) => scopedVendorIds.has(i.vendorId));
+      
+      setStores(scopedStores);
       setMasterProducts(finalProducts);
-      setVendors(vendorsData);
-      setAllInventory(inventoryData);
+      setVendors(scopedVendors);
+      setAllInventory(scopedInventory);
+      setPurchaseOrders(scopedPOs);
+      setVendorIssues(scopedIssues);
+      setRecommendations(recsData);
     } catch (err) {
       console.error("Error loading database scoping datasets:", err);
     } finally {
@@ -142,6 +183,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         masterProducts,
         vendors,
         allInventory,
+        purchaseOrders,
+        vendorIssues,
+        recommendations,
         loading,
         refreshData,
         getStoreInventory,
