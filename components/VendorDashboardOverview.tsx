@@ -200,13 +200,12 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
     <div className="space-y-8 animate-fadeIn pb-20">
       
       {/* 1. EXECUTIVE KPI CARDS */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-5">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">
         {[
-          { label: "VENDORS ATTENTION", val: vendorsNeedingAttention, color: "border-t-rose-500", desc: "Critical SLA alerts", kpi: "vendors_attention" },
-          { label: "POS AWAITING ACTION", val: posAwaitingAction, color: "border-t-orange-500", desc: "Pending approvals", kpi: "pos_awaiting" },
+          { label: "VENDORS NEEDING ATTENTION", val: vendorsNeedingAttention, color: "border-t-rose-500", desc: "Critical SLA alerts", kpi: "vendors_attention" },
+          { label: "PURCHASE ORDERS AWAITING ACTION", val: posAwaitingAction, color: "border-t-orange-500", desc: "Pending approvals", kpi: "pos_awaiting" },
           { label: "DELAYED DELIVERIES", val: delayedDeliveries, color: "border-t-red-600", desc: "Past due orders", kpi: "delayed_deliveries" },
           { label: "PRODUCTS SUPPLY RISK", val: supplyRiskProductsCount, color: "border-t-amber-500", desc: "Below safety stock", kpi: "supply_risk" },
-          { label: "CRITICAL VENDOR ISSUES", val: criticalVendorIssues, color: "border-t-rose-600", desc: "Open vendor disputes", kpi: "critical_issues" },
           { label: "DELIVERIES DUE TODAY", val: deliveriesDueToday, color: "border-t-bp-green", desc: "Expected arrivals", kpi: "deliveries_today" },
         ].map((kpi, idx) => (
           <div key={idx} onClick={() => onNavigate("kpi_detail", kpi.kpi)} className={`cursor-pointer bg-white rounded-2xl p-5 border-t-4 ${kpi.color} border-x border-b border-slate-100 shadow-sm flex flex-col justify-between card-hover-effect text-left`}>
