@@ -43,8 +43,10 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
   // Formula: COUNT(Deliveries) WHERE Status is Delayed OR (Status is Approved/In Transit AND Date is past due)
   // We exclude Pending POs because they haven't been ordered yet.
   const delayedDeliveries = purchaseOrders.filter(po => 
-    po.status === "Delayed" || 
-    ((po.status === "Approved" || po.status === "In Transit") && po.expectedDeliveryDate < todayStr)
+    po.status !== "Cancelled" && (
+      po.status === "Delayed" || 
+      ((po.status === "Approved" || po.status === "In Transit") && po.expectedDeliveryDate < todayStr)
+    )
   ).length;
 
   // KPI 4 - Products at Supply Risk
@@ -59,7 +61,7 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
       if (prod && inv.currentStock < safetyStock) {
         // Check if there is an incoming supply delayed for this vendor/product
         // (For simplicity we just flag it if stock is very low or there is a known delay from this vendor)
-        const vendorDelay = purchaseOrders.find(po => po.vendorId === inv.vendorId && po.expectedDeliveryDate < todayStr && po.status !== "Delivered");
+        const vendorDelay = purchaseOrders.find(po => po.vendorId === inv.vendorId && po.expectedDeliveryDate < todayStr && po.status !== "Delivered" && po.status !== "Cancelled");
         
         if (inv.currentStock < 5 || vendorDelay) {
           supplyRiskProductsCount++;
@@ -75,6 +77,7 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
                vendor: vendorName,
                store: storeName,
                daysRemaining: inv.currentStock, // Approximation
+               uom: prod.uom || "Units",
                risk: riskLevel
              });
           }
@@ -90,7 +93,10 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
   const criticalVendorIssues = issues.filter(i => i.priority === "High" && i.status === "Open").length;
 
   // flex row items / deliveries Due Today
-  const deliveriesDueToday = purchaseOrders.filter(po => po.expectedDeliveryDate === todayStr && po.status !== "Delivered").length;
+  const deliveriesDueToday = purchaseOrders.filter(po => 
+    po.expectedDeliveryDate === todayStr && 
+    (po.status === "Approved" || po.status === "In Transit")
+  ).length;
 
   // 2. VENDOR ACTION CENTER
   const openVendorIssues = issues.filter(i => i.status === "Open").sort((a, b) => {
@@ -196,14 +202,14 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
       {/* 1. EXECUTIVE KPI CARDS */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-5">
         {[
-          { label: "VENDORS ATTENTION", val: vendorsNeedingAttention, color: "border-t-rose-500", desc: "Critical SLA alerts" },
-          { label: "POS AWAITING ACTION", val: posAwaitingAction, color: "border-t-orange-500", desc: "Pending approvals" },
-          { label: "DELAYED DELIVERIES", val: delayedDeliveries, color: "border-t-red-600", desc: "Past due orders" },
-          { label: "PRODUCTS SUPPLY RISK", val: supplyRiskProductsCount, color: "border-t-amber-500", desc: "Below safety stock" },
-          { label: "CRITICAL VENDOR ISSUES", val: criticalVendorIssues, color: "border-t-rose-600", desc: "Open vendor disputes" },
-          { label: "DELIVERIES DUE TODAY", val: deliveriesDueToday, color: "border-t-bp-green", desc: "Expected arrivals" },
+          { label: "VENDORS ATTENTION", val: vendorsNeedingAttention, color: "border-t-rose-500", desc: "Critical SLA alerts", kpi: "vendors_attention" },
+          { label: "POS AWAITING ACTION", val: posAwaitingAction, color: "border-t-orange-500", desc: "Pending approvals", kpi: "pos_awaiting" },
+          { label: "DELAYED DELIVERIES", val: delayedDeliveries, color: "border-t-red-600", desc: "Past due orders", kpi: "delayed_deliveries" },
+          { label: "PRODUCTS SUPPLY RISK", val: supplyRiskProductsCount, color: "border-t-amber-500", desc: "Below safety stock", kpi: "supply_risk" },
+          { label: "CRITICAL VENDOR ISSUES", val: criticalVendorIssues, color: "border-t-rose-600", desc: "Open vendor disputes", kpi: "critical_issues" },
+          { label: "DELIVERIES DUE TODAY", val: deliveriesDueToday, color: "border-t-bp-green", desc: "Expected arrivals", kpi: "deliveries_today" },
         ].map((kpi, idx) => (
-          <div key={idx} className={`bg-white rounded-2xl p-5 border-t-4 ${kpi.color} border-x border-b border-slate-100 shadow-sm flex flex-col justify-between card-hover-effect text-left`}>
+          <div key={idx} onClick={() => onNavigate("kpi_detail", kpi.kpi)} className={`cursor-pointer bg-white rounded-2xl p-5 border-t-4 ${kpi.color} border-x border-b border-slate-100 shadow-sm flex flex-col justify-between card-hover-effect text-left`}>
             <h3 className="text-[9.5px] font-extrabold text-slate-500 uppercase tracking-wider mb-2 leading-tight">{kpi.label}</h3>
             <p className="text-3xl font-extrabold text-slate-900 tracking-tight">{kpi.val}</p>
             <p className="text-[9px] text-slate-400 font-semibold mt-1">{kpi.desc}</p>
@@ -342,14 +348,25 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
         </div>
       </div>
 
-      {/* 4. ROW 2: PRODUCTS AT SUPPLY RISK & VENDOR DELAY IMPACT */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-left">
+      {/* 4. ROW 2: PRODUCTS AT SUPPLY RISK */}
+      <div className="w-full text-left">
         
         {/* Products at Supply Risk */}
-        <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden card-hover-effect">
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden card-hover-effect">
           <div className="px-6 py-5 border-b border-slate-50">
             <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Products at Supply Risk</h3>
             <p className="text-[10px] text-slate-400 font-medium mt-0.5">Critical raw materials and SKUs with supply risk</p>
+            <div className="mt-3 text-[9.5px] text-slate-500 bg-slate-50 p-2.5 rounded border border-slate-100 flex items-start gap-2">
+              <svg className="w-3.5 h-3.5 shrink-0 text-slate-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="leading-relaxed">
+                <strong className="text-slate-700">Risk Calculation:</strong> Evaluates items where Current Stock is below Safety Stock. 
+                Marked <span className="font-bold text-rose-600">High</span> if current stock is critically low (≤ 2 units), 
+                otherwise marked <span className="font-bold text-blue-500">Medium</span>.
+                Items with known delayed incoming supply are also explicitly flagged.
+              </span>
+            </div>
           </div>
           <div className="overflow-x-auto scrollbar-thin">
             <table className="w-full text-xs text-left">
@@ -359,6 +376,7 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
                   <th className="px-6 py-4">Vendor</th>
                   <th className="px-6 py-4">Store</th>
                   <th className="px-6 py-4 text-right">Stock</th>
+                  <th className="px-6 py-4 text-center">Unit</th>
                   <th className="px-6 py-4 text-center">Risk</th>
                 </tr>
               </thead>
@@ -369,6 +387,7 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
                     <td className="px-6 py-4 text-slate-500 font-medium">{p.vendor}</td>
                     <td className="px-6 py-4 text-slate-500 font-medium">{p.store}</td>
                     <td className="px-6 py-4 text-right text-rose-600 font-bold">{p.daysRemaining}</td>
+                    <td className="px-6 py-4 text-center text-slate-500 font-medium">{p.uom}</td>
                     <td className="px-6 py-4 text-center">
                        <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider border ${getStatusBadgeStyle(p.risk)}`}>
                         {p.risk}
@@ -378,41 +397,13 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
                 ))}
                 {supplyRiskProducts.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-slate-400 font-medium">No products currently at supply risk.</td>
+                    <td colSpan={6} className="px-6 py-8 text-center text-slate-400 font-medium">No products currently at supply risk.</td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
         </div>
-
-        {/* Vendor Delay Impact */}
-        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 flex flex-col card-hover-effect">
-          <div className="border-b border-slate-50 pb-3.5 mb-5">
-            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Vendor Delay Impact</h3>
-            <p className="text-[10px] text-slate-400 font-medium mt-0.5">Operational impact counts</p>
-          </div>
-          <div className="flex-grow flex flex-col justify-center space-y-4">
-            {vendorDelays.map((v, i) => (
-              <div key={i} className="flex flex-col gap-1.5">
-                <div className="flex justify-between items-end text-xs font-semibold">
-                  <span className="text-slate-700 truncate max-w-[170px]">{v.vendor}</span>
-                  <span className="text-slate-800 font-extrabold">{v.count} <span className="text-slate-400 font-semibold text-[10px]">Impacted</span></span>
-                </div>
-                <div className="w-full bg-slate-50 border border-slate-100/60 rounded-full h-2 overflow-hidden">
-                  <div 
-                    className="bg-orange-500 h-2 rounded-full transition-all duration-300" 
-                    style={{ width: `${(v.count / maxDelayCount) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-            ))}
-            {vendorDelays.length === 0 && (
-              <div className="text-center text-slate-400 text-xs font-medium py-8">No current vendor delays impacting operations.</div>
-            )}
-          </div>
-        </div>
-
       </div>
 
       {/* 5. AI PROCUREMENT RECOMMENDATIONS */}
@@ -436,7 +427,7 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
                       <p className="text-emerald-100/70 text-[10.5px] mt-0.5">There are {delayedDeliveries} delayed deliveries impacting operations.</p>
                     </div>
                   </div>
-                  <button className="whitespace-nowrap px-4 py-2 bg-bp-yellow hover:bg-yellow-400 text-slate-950 text-[10.5px] font-bold rounded-xl shadow transition">Follow Up</button>
+                  <button onClick={() => onNavigate("kpi_detail", "delayed_deliveries")} className="whitespace-nowrap px-4 py-2 bg-bp-yellow hover:bg-yellow-400 text-slate-950 text-[10.5px] font-bold rounded-xl shadow transition">Follow Up</button>
                 </div>
              )}
              {posAwaitingAction > 0 && (
@@ -448,7 +439,7 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
                       <p className="text-emerald-100/70 text-[10.5px] mt-0.5">You have {posAwaitingAction} purchase orders waiting for your approval.</p>
                     </div>
                   </div>
-                  <button className="whitespace-nowrap px-4 py-2 bg-bp-yellow hover:bg-yellow-400 text-slate-950 text-[10.5px] font-bold rounded-xl shadow transition">Review POs</button>
+                  <button onClick={() => onNavigate("kpi_detail", "pos_awaiting")} className="whitespace-nowrap px-4 py-2 bg-bp-yellow hover:bg-yellow-400 text-slate-950 text-[10.5px] font-bold rounded-xl shadow transition">Review POs</button>
                 </div>
              )}
              {supplyRiskProductsCount > 0 && (
@@ -460,7 +451,7 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
                       <p className="text-emerald-100/70 text-[10.5px] mt-0.5">Prioritize replenishment for {supplyRiskProductsCount} products at risk.</p>
                     </div>
                   </div>
-                  <button className="whitespace-nowrap px-4 py-2 bg-bp-yellow hover:bg-yellow-400 text-slate-950 text-[10.5px] font-bold rounded-xl shadow transition">Expedite</button>
+                  <button onClick={() => onNavigate("kpi_detail", "supply_risk")} className="whitespace-nowrap px-4 py-2 bg-bp-yellow hover:bg-yellow-400 text-slate-950 text-[10.5px] font-bold rounded-xl shadow transition">Expedite</button>
                 </div>
              )}
              {criticalVendorIssues > 0 && (
@@ -472,7 +463,7 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
                       <p className="text-emerald-100/70 text-[10.5px] mt-0.5">{criticalVendorIssues} critical vendor issues require immediate escalation.</p>
                     </div>
                   </div>
-                  <button className="whitespace-nowrap px-4 py-2 bg-rose-500 hover:bg-rose-400 text-white text-[10.5px] font-bold rounded-xl shadow transition">Escalate</button>
+                  <button onClick={() => onNavigate("kpi_detail", "critical_issues")} className="whitespace-nowrap px-4 py-2 bg-rose-500 hover:bg-rose-400 text-white text-[10.5px] font-bold rounded-xl shadow transition">Escalate</button>
                 </div>
              )}
              {recommendations.slice(0, Math.max(0, 4 - [delayedDeliveries, posAwaitingAction, supplyRiskProductsCount, criticalVendorIssues].filter(x => x > 0).length)).map(rec => (

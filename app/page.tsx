@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import Sidebar, { sidebarItems, getRoleAllowedTabs } from "@/components/Sidebar";
 import DashboardOverview from "@/components/DashboardOverview";
 import VendorDashboardOverview from "@/components/VendorDashboardOverview";
+import KpiDetailView from "@/components/KpiDetailView";
 import TabPlaceholder from "@/components/TabPlaceholder";
 
 // High-fidelity dashboards
@@ -72,6 +73,9 @@ export default function Home() {
   const [selectedVendorName, setSelectedVendorName] = useState<string>("");
   const [selectedProductCode, setSelectedProductCode] = useState<string>("");
 
+  // KPI detail drill-down state (hidden page, not in sidebar)
+  const [kpiDetail, setKpiDetail] = useState<string | null>(null);
+
   // Initialize active tab based on user role when loaded
   useEffect(() => {
     if (user && !activeTab) {
@@ -96,12 +100,22 @@ export default function Home() {
     vendorName?: string,
     productCode?: string
   ) => {
+    // Handle KPI detail drill-down (hidden page, not in sidebar)
+    if (tabId === "kpi_detail") {
+      setKpiDetail(subTabId);
+      return;
+    }
+
+    // Clear KPI detail when navigating away
+    setKpiDetail(null);
+
     // Check if destination tab is allowed for this role
     if (user) {
       const allowed = getRoleAllowedTabs(user.role);
       if (allowed.includes(tabId)) {
         setActiveTab(tabId);
-        setVendorSubTab(subTabId);
+        if (tabId === "2") setSubTab(subTabId);
+        if (tabId === "3") setVendorSubTab(subTabId);
         if (vendorName) {
           setSelectedVendorName(vendorName);
         }
@@ -151,7 +165,7 @@ export default function Home() {
       {/* Sidebar navigation */}
       <Sidebar
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={(tabId: string) => { setKpiDetail(null); setActiveTab(tabId); }}
         user={user}
         logout={logout}
         isOpen={isSidebarOpen}
@@ -185,8 +199,10 @@ export default function Home() {
         {/* Content body space */}
         <div className="p-6 lg:p-8 flex-grow">
           {activeTab === "1" ? (
-            /* Tab 1: Executive Overview */
-            user.role === "vendor manager" ? (
+            /* Tab 1: Executive Overview or KPI Detail Drill-down */
+            kpiDetail ? (
+              <KpiDetailView kpiType={kpiDetail} onBack={() => setKpiDetail(null)} />
+            ) : user.role === "vendor manager" ? (
               <VendorDashboardOverview onNavigate={handleCrossNavigate} />
             ) : (
               <DashboardOverview onNavigate={handleCrossNavigate} />
