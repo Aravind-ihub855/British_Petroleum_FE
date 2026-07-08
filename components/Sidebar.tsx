@@ -266,7 +266,7 @@ export default function Sidebar({
             <span className="text-[10px] text-slate-400 font-semibold truncate mt-1">{user.role || "User"}</span>
             {user.role === "store manager" && user.storeId && (
               <span className="text-[9px] text-bp-yellow font-bold truncate mt-0.5" title={`${storeName} (${user.storeId})`}>
-                {storeName || "Store"}: {user.storeId}
+                {/* {storeName || "Store"}: {user.storeId} */}
               </span>
             )}
           </div>

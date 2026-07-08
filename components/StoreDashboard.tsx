@@ -244,6 +244,7 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
                 <th className="py-3.5 px-6">Product</th>
                 <th className="py-3.5 px-4 text-center">UOM</th>
                 <th className="py-3.5 px-4 text-right">Current Stock</th>
+                <th className="py-3.5 px-4 text-right">Safety Stock</th>
                 <th className="py-3.5 px-4 text-right">Avg Daily</th>
                 <th className="py-3.5 px-4 text-center">Stockout Date</th>
                 <th className="py-3.5 px-4 text-center">Days Left</th>
@@ -282,6 +283,7 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
                     </td>
                     <td className="py-4 px-4 text-center text-slate-400 font-medium">{row.uom}</td>
                     <td className="py-4 px-4 text-right text-slate-655 font-normal">{row.currentStock}</td>
+                    <td className="py-4 px-4 text-right text-slate-500 font-medium">{row.safetyStockLevel}</td>
                     <td className="py-4 px-4 text-right text-slate-500 font-medium">{row.avgDailyConsumption}</td>
                     <td className="py-4 px-4 text-center">
                       <div className={`font-bold ${

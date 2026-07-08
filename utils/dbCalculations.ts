@@ -153,67 +153,141 @@ export function generateDBProcurementData(stores: Store[], vendors: Vendor[]) {
   return { purchaseOrders, purchaseRequests, issues, recommendations };
 }
 
-export function getVendorsForProductDB(vendors: Vendor[], productCode: string) {
+export function getVendorsForProductDB(vendors: Vendor[], productCode: string, masterProducts: Product[]) {
   const hash = getSeedHash(productCode);
+  const activeProduct = masterProducts.find((p) => p.code === productCode);
   const vendorCount = (hash % 3 === 0) ? 1 : (hash % 3 === 1) ? 2 : 3;
-  const links = [];
-  for (let i = 0; i < vendorCount; i++) {
-    const vIdx = (hash + i * 7) % vendors.length;
-    if (vendors[vIdx]) {
-      const vendor = vendors[vIdx];
+  const links: any[] = [];
+
+  // Add the primary vendor first
+  const primaryVendor = activeProduct ? vendors.find(v => v.id === activeProduct.vendorId) : null;
+  if (primaryVendor && activeProduct) {
+    const seed = getSeedHash(primaryVendor.id + productCode);
+    links.push({
+      vendorId: primaryVendor.id,
+      vendorName: primaryVendor.name,
+      vendorType: primaryVendor.type || "Distributor",
+      vendorRegion: primaryVendor.region || "National",
+      costScore: `${85 + (seed % 15)}%`,
+      qualityScore: `${90 + (seed % 8)}%`,
+      deliveryTime: `${activeProduct.leadTimeDays} Days`,
+      overallScore: parseFloat((8.5 + (seed % 15) / 10).toFixed(1)),
+      unitCost: activeProduct.unitPrice,
+      leadTimeDays: activeProduct.leadTimeDays,
+      onTimePercent: 90 + (seed % 10),
+      rejectionRate: parseFloat((0.2 + (seed % 15) / 10).toFixed(1)),
+      moq: (seed % 3 + 1) * 100,
+      deliveriesCount: 120 + (seed % 80),
+      supplySharePercent: 100, // will adjust below
+      isPrimary: true,
+      isActive: true,
+      trend: (seed % 3 === 0) ? "improving" : (seed % 3 === 1) ? "stable" : "declining"
+    });
+  }
+
+  // Add alternative vendors
+  const otherVendors = vendors.filter(v => !primaryVendor || v.id !== primaryVendor.id);
+  const remainingCount = vendorCount - (primaryVendor ? 1 : 0);
+  for (let i = 0; i < remainingCount; i++) {
+    if (otherVendors.length === 0) break;
+    const vIdx = (hash + i * 7) % otherVendors.length;
+    const vendor = otherVendors[vIdx];
+    if (vendor) {
       const seed = getSeedHash(vendor.id + productCode);
+      const baseCost = activeProduct ? activeProduct.unitPrice : 10.0;
+      const baseLeadTime = activeProduct ? activeProduct.leadTimeDays : 3;
+
+      const costMultiplier = 0.95 + (seed % 20) / 100; // 0.95x to 1.15x cost
+      const altCost = parseFloat((baseCost * costMultiplier).toFixed(2));
+      const altLeadTime = Math.max(1, baseLeadTime + (seed % 3 - 1)); // -1 to +1 days lead time
+
       links.push({
         vendorId: vendor.id,
         vendorName: vendor.name,
         vendorType: vendor.type || "Distributor",
         vendorRegion: vendor.region || "National",
-        costScore: `${80 + (seed % 20)}%`,
-        qualityScore: `${85 + (seed % 15)}%`,
-        deliveryTime: `${(1 + (seed % 40) / 10).toFixed(1)} Days`,
-        overallScore: parseFloat((8.0 + (seed % 20) / 10).toFixed(1)),
-        unitCost: 1.5 + (seed % 10),
-        leadTimeDays: 1 + (seed % 4),
-        onTimePercent: 85 + (seed % 15),
-        rejectionRate: parseFloat((0.5 + (seed % 20) / 10).toFixed(1)),
-        moq: (seed % 5 + 1) * 100,
-        deliveriesCount: 50 + (seed % 200),
-        supplySharePercent: Math.round(100 / vendorCount),
-        isPrimary: i === 0,
+        costScore: `${75 + (seed % 20)}%`,
+        qualityScore: `${80 + (seed % 18)}%`,
+        deliveryTime: `${altLeadTime} Days`,
+        overallScore: parseFloat((7.0 + (seed % 25) / 10).toFixed(1)),
+        unitCost: altCost,
+        leadTimeDays: altLeadTime,
+        onTimePercent: 80 + (seed % 15),
+        rejectionRate: parseFloat((0.5 + (seed % 25) / 10).toFixed(1)),
+        moq: (seed % 4 + 1) * 150,
+        deliveriesCount: 40 + (seed % 100),
+        supplySharePercent: 0, // will adjust below
+        isPrimary: false,
         isActive: true,
         trend: (seed % 3 === 0) ? "improving" : (seed % 3 === 1) ? "stable" : "declining"
       });
     }
   }
+
+  // Adjust supply share percentages
+  if (links.length > 0) {
+    if (links.length === 1) {
+      links[0].supplySharePercent = 100;
+    } else if (links.length === 2) {
+      links[0].supplySharePercent = 70;
+      links[1].supplySharePercent = 30;
+    } else {
+      links[0].supplySharePercent = 60;
+      links[1].supplySharePercent = 25;
+      if (links[2]) links[2].supplySharePercent = 15;
+    }
+  }
+
   return links;
 }
 
 export function getProductsForVendorDB(masterProducts: Product[], vendorId: string) {
   const hash = getSeedHash(vendorId);
   const numProducts = 3 + (hash % 6);
-  const productLinks = [];
-  for (let i = 0; i < numProducts; i++) {
-    const pIdx = (hash + i * 11) % masterProducts.length;
-    if (masterProducts[pIdx]) {
-      const p = masterProducts[pIdx];
-      const seed = getSeedHash(vendorId + p.code);
-      productLinks.push({
-        productCode: p.code,
-        productName: p.name,
-        category: p.category,
-        uom: p.uom,
-        unitCost: p.unitPrice ? parseFloat((p.unitPrice * (0.8 + (seed % 40) / 100)).toFixed(2)) : (1.5 + (seed % 10)),
-        deliveryTime: `${1 + (seed % 5)} Days`,
-        isSoleSource: seed % 4 === 0,
-        fsnClass: p.code === "BP-PROD-001" ? "Fast" : (seed % 2 === 0 ? "Non-moving" : "Slow"),
-        deliveriesCount: 20 + (seed % 100),
-        overallScore: parseFloat((8.0 + (seed % 20) / 10).toFixed(1)),
-        spend: 5000 + (seed % 20000),
-        onTimePercent: 80 + (seed % 20),
-        leadTimeDays: 1 + (seed % 5),
-        rejectionRate: parseFloat((0.5 + (seed % 25) / 10).toFixed(1)),
-        trend: (seed % 3 === 0) ? "improving" : (seed % 3 === 1) ? "stable" : "declining"
-      });
+  const productLinks: any[] = [];
+
+  // Get products where this vendor is the primary vendor
+  const primaryProducts = masterProducts.filter(p => p.vendorId === vendorId);
+  const otherProducts = masterProducts.filter(p => p.vendorId !== vendorId);
+
+  const selectedProducts = [...primaryProducts];
+  if (selectedProducts.length < numProducts) {
+    const needed = numProducts - selectedProducts.length;
+    for (let i = 0; i < needed; i++) {
+      if (otherProducts.length === 0) break;
+      const pIdx = (hash + i * 11) % otherProducts.length;
+      const p = otherProducts[pIdx];
+      if (p && !selectedProducts.some(sp => sp.code === p.code)) {
+        selectedProducts.push(p);
+      }
     }
   }
+
+  selectedProducts.forEach((p) => {
+    const seed = getSeedHash(vendorId + p.code);
+    const isPrimary = p.vendorId === vendorId;
+
+    const unitCost = isPrimary ? p.unitPrice : parseFloat((p.unitPrice * (0.95 + (seed % 15) / 100)).toFixed(2));
+    const leadTime = isPrimary ? p.leadTimeDays : Math.max(1, p.leadTimeDays + (seed % 3 - 1));
+
+    productLinks.push({
+      productCode: p.code,
+      productName: p.name,
+      category: p.category,
+      uom: p.uom,
+      unitCost: unitCost,
+      deliveryTime: `${leadTime} Days`,
+      isSoleSource: isPrimary && !masterProducts.some(mp => mp.code === p.code && mp.vendorId !== vendorId),
+      fsnClass: "Slow", // dynamically overridden in frontend
+      deliveriesCount: 40 + (seed % 110),
+      overallScore: parseFloat((8.0 + (seed % 18) / 10).toFixed(1)),
+      spend: 4000 + (seed % 18000),
+      onTimePercent: 82 + (seed % 18),
+      leadTimeDays: leadTime,
+      rejectionRate: parseFloat((0.4 + (seed % 20) / 10).toFixed(1)),
+      trend: (seed % 3 === 0) ? "improving" : (seed % 3 === 1) ? "stable" : "declining"
+    });
+  });
+
   return productLinks;
 }

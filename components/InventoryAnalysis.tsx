@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useData } from "@/context/DataContext";
+import { useAuth } from "@/context/AuthContext";
 
 interface NonMovingRow {
   product: string;
@@ -12,7 +13,9 @@ interface NonMovingRow {
 }
 
 export default function InventoryAnalysis() {
-  const { stores, getStoreInventory, loading } = useData();
+  const { stores, getStoreInventory, masterProducts, loading } = useData();
+  const { user } = useAuth();
+  const isStoreManager = user?.role === "store manager";
 
   if (loading) {
     return (
@@ -24,29 +27,37 @@ export default function InventoryAnalysis() {
       </div>
     );
   }
+
+  // Filter stores if user is store manager
+  const displayStores = isStoreManager && user?.storeId
+    ? stores.filter(s => s.id === user.storeId)
+    : stores;
+
   // Dynamically compute FSN categories based on actual sales volumes
   const allStoreItemsMap: Record<string, { name: string; uom: string; stock: number; maxConsumption: number }> = {};
+  masterProducts.forEach((p) => {
+    allStoreItemsMap[p.code] = {
+      name: p.name,
+      uom: p.uom,
+      stock: 0,
+      maxConsumption: 0
+    };
+  });
 
-  stores.forEach((st) => {
+  displayStores.forEach((st) => {
     const inv = getStoreInventory(st.id);
     inv.forEach((item) => {
-      if (!allStoreItemsMap[item.code]) {
-        allStoreItemsMap[item.code] = {
-          name: item.name,
-          uom: item.uom,
-          stock: 0,
-          maxConsumption: 0
-        };
-      }
-      allStoreItemsMap[item.code].stock += item.currentStock;
-      if (item.avgDailyConsumption > allStoreItemsMap[item.code].maxConsumption) {
-        allStoreItemsMap[item.code].maxConsumption = item.avgDailyConsumption;
+      if (allStoreItemsMap[item.code]) {
+        allStoreItemsMap[item.code].stock += item.currentStock;
+        if (item.avgDailyConsumption > allStoreItemsMap[item.code].maxConsumption) {
+          allStoreItemsMap[item.code].maxConsumption = item.avgDailyConsumption;
+        }
       }
     });
   });
 
   const uniqueItemsList = Object.values(allStoreItemsMap);
-  const totalSKUs = uniqueItemsList.length;
+  const totalSKUs = masterProducts.length;
 
   // Classify products:
   // Fast (F): Max daily consumption >= 25.0
@@ -62,7 +73,7 @@ export default function InventoryAnalysis() {
 
   // Build top 5 non-moving products from dynamic dataset
   const nonMovingItems: NonMovingRow[] = uniqueItemsList
-    .filter((item) => item.maxConsumption < 5.0)
+    .filter((item) => item.maxConsumption < 5.0 && item.stock > 0)
     .map((item, idx) => {
       // Deterministic dates based on code string
       const days = 100 + (idx * 17) % 80;
@@ -135,17 +146,17 @@ export default function InventoryAnalysis() {
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#008751] flex-shrink-0" />
                 <span>Fast Moving</span>
-                <span className="font-semibold text-slate-900 ml-1">{fastPercent}%</span>
+                <span className="font-bold text-slate-900 ml-1">{fastItemsCount} <span className="text-slate-400 font-semibold text-[10.5px]">({fastPercent}%)</span></span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-500 flex-shrink-0" />
                 <span>Slow Moving</span>
-                <span className="font-semibold text-slate-900 ml-1">{slowPercent}%</span>
+                <span className="font-bold text-slate-900 ml-1">{slowItemsCount} <span className="text-slate-400 font-semibold text-[10.5px]">({slowPercent}%)</span></span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-500 flex-shrink-0" />
                 <span>Non Moving</span>
-                <span className="font-semibold text-slate-900 ml-1">{nonPercent}%</span>
+                <span className="font-bold text-slate-900 ml-1">{nonMovingItemsCount} <span className="text-slate-400 font-semibold text-[10.5px]">({nonPercent}%)</span></span>
               </div>
             </div>
           </div>

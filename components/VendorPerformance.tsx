@@ -23,7 +23,7 @@ export default function VendorPerformance({
   setSelectedProductCode,
   onNavigate
 }: VendorPerformanceProps) {
-  const { vendors, masterProducts, loading } = useData();
+  const { vendors, masterProducts, allInventory, loading } = useData();
   
   // Set defaults if state is empty
   useEffect(() => {
@@ -45,6 +45,15 @@ export default function VendorPerformance({
       </div>
     );
   }
+
+  const getProductFsnClass = (productCode: string): "Fast" | "Slow" | "Non-moving" => {
+    const items = allInventory.filter((inv) => inv.code === productCode);
+    if (items.length === 0) return "Non-moving";
+    const maxConsumption = Math.max(...items.map((item) => item.avgDailyConsumption));
+    if (maxConsumption >= 25.0) return "Fast";
+    if (maxConsumption >= 5.0) return "Slow";
+    return "Non-moving";
+  };
 
   // Tab 1 overview metrics
   const performanceLogs = calculateVendorPerformanceMetrics(vendors, masterProducts);
@@ -90,7 +99,7 @@ export default function VendorPerformance({
   // Tab 3 Product-wise details
   const activeProduct = masterProducts.find((p) => p.code === selectedProductCode) || masterProducts[0];
 
-  const productVendors = activeProduct ? getVendorsForProductDB(vendors, activeProduct.code) : [];
+  const productVendors = activeProduct ? getVendorsForProductDB(vendors, activeProduct.code, masterProducts) : [];
 
   // Dynamic alerts
   const vendorCount = productVendors.length;
@@ -404,13 +413,18 @@ export default function VendorPerformance({
                         </span>
                       </td>
                       <td className="py-4.5 px-4 text-center">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                          row.fsnClass === "Fast" ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
-                          row.fsnClass === "Slow" ? "bg-amber-50 text-amber-600 border-amber-100" :
-                          "bg-rose-50 text-rose-600 border-rose-100"
-                        }`}>
-                          {row.fsnClass}
-                        </span>
+                        {(() => {
+                          const fsn = getProductFsnClass(row.productCode);
+                          const fsnStyle =
+                            fsn === "Fast" ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
+                            fsn === "Slow" ? "bg-amber-50 text-amber-600 border-amber-100" :
+                            "bg-rose-50 text-rose-600 border-rose-100";
+                          return (
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${fsnStyle}`}>
+                              {fsn}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="py-4.5 px-6 text-center">
                         <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
@@ -517,7 +531,7 @@ export default function VendorPerformance({
                 </div>
                 <div className="bg-slate-55 bg-slate-50/50 p-3 rounded-xl border border-slate-100 shadow-2xs">
                   <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">FSN Status</span>
-                  <span className="text-slate-900 font-extrabold mt-1 block">{activeProduct.code === "BP-PROD-001" ? "Fast" : "Slow"}</span>
+                  <span className="text-slate-900 font-extrabold mt-1 block">{getProductFsnClass(activeProduct.code)}</span>
                 </div>
               </div>
             </div>

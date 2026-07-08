@@ -206,6 +206,8 @@ export default function ProductDetails({ productCode, onBack }: ProductDetailsPr
 
   const { points, orderDate, stockoutDate } = getGraphData();
 
+  const dynamicRol = Math.ceil(item.avgDailyConsumption * item.leadTimeDays) + item.safetyStockLevel;
+
   // Setup SVG scale coordinates
   const paddingLeft = 60;
   const paddingRight = 40;
@@ -216,7 +218,7 @@ export default function ProductDetails({ productCode, onBack }: ProductDetailsPr
   const viewBoxWidth = plotWidth + paddingLeft + paddingRight;
   const viewBoxHeight = plotHeight + paddingTop + paddingBottom;
 
-  const maxVal = Math.max(...points.map((p) => p.value), item.rol, item.safetyStockLevel, 100) * 1.25;
+  const maxVal = Math.max(...points.map((p) => p.value), dynamicRol, item.safetyStockLevel, 100) * 1.25;
 
   const getX = (idx: number) => paddingLeft + (idx / 20) * plotWidth;
   const getY = (val: number) => paddingTop + plotHeight - (val / maxVal) * plotHeight;
@@ -236,23 +238,16 @@ export default function ProductDetails({ productCode, onBack }: ProductDetailsPr
   const stockoutX = getX(stockoutIdx !== -1 ? stockoutIdx : 12);
 
   // Y positions for ROL & Safety Stock levels
-  const rolY = getY(item.rol);
+  const rolY = getY(dynamicRol);
   const safetyY = getY(item.safetyStockLevel);
 
   return (
     <div className="space-y-6">
       
-      <div className="flex items-center justify-between">
-        <div className="text-[11px] text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
-          <span>Dashboard</span>
-          <span>&gt;</span>
-          <span>Predictive Stockout</span>
-          <span>&gt;</span>
-          <span className="text-slate-600">Product Details</span>
-        </div>
+      <div className="flex w-full items-center justify-end">
         <button
           onClick={onBack}
-          className="border border-emerald-500/20 text-bp-green hover:bg-slate-50 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition duration-150"
+          className="ml-auto border border-emerald-500/20 text-bp-green hover:bg-slate-50 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition duration-150"
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -290,19 +285,19 @@ export default function ProductDetails({ productCode, onBack }: ProductDetailsPr
           </div>
         </div>
 
-        <div className="flex items-center gap-6 border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-8">
+        <div className="flex items-center gap-6 border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-10">
           <div className="flex flex-col">
             <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Current Stock</span>
             <span className="text-3xl font-extrabold tracking-tight text-bp-green">
               {item.currentStock} <span className="text-sm font-semibold text-slate-500">{item.uom}</span>
             </span>
           </div>
-          <div className="flex flex-col">
+          {/* <div className="flex flex-col">
             <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Storage Location</span>
             <span className="text-xs font-bold text-slate-700 leading-snug">
               {item.storageLocation || "Shelves / Drums"}
             </span>
-          </div>
+          </div> */}
         </div>
       </div>
 
@@ -352,7 +347,7 @@ export default function ProductDetails({ productCode, onBack }: ProductDetailsPr
               <line x1={paddingLeft} y1={safetyY} x2={paddingLeft + plotWidth} y2={safetyY} stroke="#f43f5e" strokeWidth="1.25" strokeDasharray="5,5" />
 
               {/* Labels for horizontal markers on the right edge */}
-              <text x={paddingLeft + plotWidth - 5} y={rolY - 4} fill="#f59e0b" className="text-[9px] font-extrabold" textAnchor="end">ROL ({item.rol})</text>
+              <text x={paddingLeft + plotWidth - 5} y={rolY - 4} fill="#f59e0b" className="text-[9px] font-extrabold" textAnchor="end">ROL ({dynamicRol})</text>
               <text x={paddingLeft + plotWidth - 5} y={safetyY - 4} fill="#f43f5e" className="text-[9px] font-extrabold" textAnchor="end">Safety Stock ({item.safetyStockLevel})</text>
 
               {/* Vertical Marker Line: Order Before */}
@@ -397,11 +392,11 @@ export default function ProductDetails({ productCode, onBack }: ProductDetailsPr
             </div>
             <div className="flex justify-between items-center py-0.5">
               <span className="text-slate-400 font-medium">Reorder Level (ROL)</span>
-              <span>{item.rol} {item.uom}</span>
+              <span>{dynamicRol} {item.uom}</span>
             </div>
             <div className="flex justify-between items-center py-0.5">
               <span className="text-slate-400 font-medium">Reorder Quantity (ROQ)</span>
-              <span>{item.roq} {item.uom}</span>
+              <span>{item.recommendedRoq} {item.uom}</span>
             </div>
             <div className="flex justify-between items-center py-0.5">
               <span className="text-slate-400 font-medium">Lead Time</span>
