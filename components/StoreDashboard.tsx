@@ -137,6 +137,29 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
         </div>
       )}
 
+            {/* KPI Cards Row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-bp-green border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
+          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Total Products</span>
+          <span className="text-3xl font-extrabold tracking-tight text-slate-900 mt-2">{totalProducts}</span>
+        </div>
+        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-orange-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
+          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Below ROL (PR Needed)</span>
+          <span className="text-3xl font-extrabold tracking-tight text-slate-900 mt-2">{atRiskCount}</span>
+          <p className="text-[9.5px] text-rose-500 font-bold mt-1.5 uppercase tracking-wide">Purchase Requests Required</p>
+        </div>
+        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-rose-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
+          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Stockout in 7 Days</span>
+          <span className="text-3xl font-extrabold tracking-tight text-rose-600 mt-2">{stockoutIn7Days}</span>
+          <p className="text-[9.5px] text-rose-500 font-bold mt-1.5 uppercase tracking-wide">Products </p>
+        </div>
+        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-rose-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
+          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Overdue Orders</span>
+          <span className="text-3xl font-extrabold tracking-tight text-rose-600 mt-2">{overdueOrdersCount}</span>
+          <p className="text-[9.5px] text-rose-500 font-bold mt-1.5 uppercase tracking-wide">Orders Past Deadline</p>
+        </div>
+      </div>
+      
       {/* Grid of Interactive Table Filters */}
       <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-wrap gap-4 items-end text-left text-xs font-semibold text-slate-700 card-hover-effect">
         <div className="flex-1 min-w-[150px] space-y-1">
@@ -213,28 +236,7 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
         </button>
       </div>
 
-      {/* KPI Cards Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-bp-green border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
-          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Total Products</span>
-          <span className="text-3xl font-extrabold tracking-tight text-slate-900 mt-2">{totalProducts}</span>
-        </div>
-        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-orange-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
-          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Below ROL (PR Needed)</span>
-          <span className="text-3xl font-extrabold tracking-tight text-slate-900 mt-2">{atRiskCount}</span>
-          <p className="text-[9.5px] text-rose-500 font-bold mt-1.5 uppercase tracking-wide">Purchase Requests Required</p>
-        </div>
-        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-rose-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
-          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Stockout in 7 Days</span>
-          <span className="text-3xl font-extrabold tracking-tight text-rose-600 mt-2">{stockoutIn7Days}</span>
-          <p className="text-[9.5px] text-rose-500 font-bold mt-1.5 uppercase tracking-wide">Products </p>
-        </div>
-        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-rose-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
-          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Overdue Orders</span>
-          <span className="text-3xl font-extrabold tracking-tight text-rose-600 mt-2">{overdueOrdersCount}</span>
-          <p className="text-[9.5px] text-rose-500 font-bold mt-1.5 uppercase tracking-wide">Orders Past Deadline</p>
-        </div>
-      </div>
+
 
       {/* Main Predictions Table */}
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden text-left card-hover-effect">
