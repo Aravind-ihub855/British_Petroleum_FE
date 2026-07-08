@@ -26,7 +26,7 @@ export default function UserManagement() {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("store manager");
   const [selectedStoreId, setSelectedStoreId] = useState("");
-  const [selectedRegion, setSelectedRegion] = useState("Chicago");
+  const [selectedRegion, setSelectedRegion] = useState("North");
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
@@ -85,7 +85,7 @@ export default function UserManagement() {
     
     if (role === "store manager") {
       storeId = selectedStoreId || (stores[0]?.id || "");
-    } else if (role === "regional head") {
+    } else if (role === "regional head" || role === "vendor manager") {
       region = selectedRegion;
     }
 
@@ -116,7 +116,7 @@ export default function UserManagement() {
         setPassword("");
         setRole("store manager");
         if (stores.length > 0) setSelectedStoreId(stores[0].id);
-        setSelectedRegion("Chicago");
+        setSelectedRegion("North");
         // Refresh list
         fetchUsers();
       } else {
@@ -166,7 +166,6 @@ export default function UserManagement() {
                 <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Password</label>
                 <input
                   type="password"
-                  placeholder="At least 6 characters"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-bp-green transition duration-150 text-slate-700 font-semibold"
@@ -180,6 +179,7 @@ export default function UserManagement() {
                   onChange={(e) => setRole(e.target.value)}
                   className="w-full px-3.5 py-2 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-bp-green transition duration-150 text-slate-700 font-semibold cursor-pointer"
                 >
+                  placeholder="At least 6 characters"
                   <option value="store manager">Store Manager</option>
                   <option value="vendor manager">Vendor Manager</option>
                   <option value="regional head">Regional Head</option>
@@ -205,8 +205,8 @@ export default function UserManagement() {
                 </div>
               )}
 
-              {/* Conditional Region Selection dropdown */}
-              {role === "regional head" && (
+              {/* Conditional Region Selection dropdown — for vendor manager and regional head */}
+              {(role === "regional head" || role === "vendor manager") && (
                 <div>
                   <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Region Assignment</label>
                   <select
@@ -214,10 +214,8 @@ export default function UserManagement() {
                     onChange={(e) => setSelectedRegion(e.target.value)}
                     className="w-full px-3.5 py-2 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-bp-green transition duration-150 text-slate-700 font-semibold cursor-pointer"
                   >
-                    <option value="Chicago">Chicago</option>
-                    <option value="Houston">Houston</option>
-                    <option value="Los Angeles">Los Angeles</option>
-                    <option value="Denver">Denver</option>
+                    <option value="North">North (Chicago, Denver)</option>
+                    <option value="South">South (Houston, Los Angeles)</option>
                   </select>
                 </div>
               )}

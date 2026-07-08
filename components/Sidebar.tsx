@@ -252,6 +252,27 @@ export default function Sidebar({
             </div>
           </div>
         )}
+
+        {/* Vendor Manager Region Information Box */}
+        {user.role === "vendor manager" && user.region && (
+          <div className="mx-4 my-3 p-4 bg-white/5 border border-white/10 rounded-2xl text-[11px] text-left text-white/90">
+            <h3 className="text-bp-yellow font-extrabold mb-3 uppercase tracking-wider text-[9.5px]">Vendor Scope</h3>
+            <div className="space-y-2.5">
+              <div className="flex justify-between">
+                <span className="text-slate-400 font-semibold">Assigned Region</span>
+                <span className="text-white font-bold">{user.region}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400 font-semibold">Covered Cities</span>
+                <span className="text-white font-bold">
+                  {user.region === "North" ? "Chicago, Denver" :
+                   user.region === "South" ? "Houston, LA" :
+                   user.region}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* User profile footer block: locked to the very bottom */}

@@ -88,39 +88,23 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       const recsRes = await fetch(`${API_URL}/api/data/recommendations`, { headers: { Authorization: `Bearer ${token}` } });
       const recsData = recsRes.ok ? await recsRes.json() : [];
 
-      // Global Region Filter
-      let scopedStores = storesData;
-      let scopedVendors = vendorsData;
-      
-      if (user?.region) {
-        const userRegion = user.region.toLowerCase();
-        scopedStores = storesData.filter((s: any) => s.city.toLowerCase() === userRegion);
-        scopedVendors = vendorsData.filter((v: any) => v.city.toLowerCase() === userRegion);
-      }
-      
-      const scopedStoreIds = new Set(scopedStores.map((s: any) => s.id));
-      const scopedInventory = inventoryData.filter((i: any) => scopedStoreIds.has(i.storeId));
-      
-      const scopedVendorIds = new Set(scopedVendors.map((v: any) => v.id));
-      let finalProducts = productsData.filter((p: any) => scopedVendorIds.has(p.vendorId));
-      
+      // Backend scopes stores/vendors/inventory/POs/issues by role+region for vendor manager/regional head.
+      // For store managers: additionally scope products to only those carried by their store.
+      let finalProducts = productsData;
+
       if (user?.role === "store manager" && user?.storeId) {
-        const managerStore = scopedStores.find((s: any) => s.id === user.storeId);
+        const managerStore = storesData.find((s: any) => s.id === user.storeId);
         if (managerStore && managerStore.products) {
-          finalProducts = finalProducts.filter((p: any) => managerStore.products[p.code]);
+          finalProducts = productsData.filter((p: any) => managerStore.products[p.code]);
         }
       }
       
-      // Filter procurement data to scoped vendors
-      const scopedPOs = poData.filter((po: any) => scopedVendorIds.has(po.vendorId));
-      const scopedIssues = issuesData.filter((i: any) => scopedVendorIds.has(i.vendorId));
-      
-      setStores(scopedStores);
+      setStores(storesData);
       setMasterProducts(finalProducts);
-      setVendors(scopedVendors);
-      setAllInventory(scopedInventory);
-      setPurchaseOrders(scopedPOs);
-      setVendorIssues(scopedIssues);
+      setVendors(vendorsData);
+      setAllInventory(inventoryData);
+      setPurchaseOrders(poData);
+      setVendorIssues(issuesData);
       setRecommendations(recsData);
     } catch (err) {
       console.error("Error loading database scoping datasets:", err);

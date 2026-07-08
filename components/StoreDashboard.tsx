@@ -14,7 +14,6 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
   const isStoreManager = user?.role === "store manager";
 
   const [selectedStoreId, setSelectedStoreId] = useState("");
-  const [targetDate, setTargetDate] = useState("2026-07-01");
 
   const [filterCategory, setFilterCategory] = useState("All");
   const [filterRisk, setFilterRisk] = useState("All");
@@ -82,7 +81,7 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
 
   // Calculate dynamic KPIs from the seeded store inventory
   const totalProducts = inventory.length;
-  const atRiskCount = inventory.filter((item) => item.prMrStatus === "PR").length;
+  const atRiskCount = inventory.filter((item) => item.currentStock <= item.rol).length;
   const stockoutIn7Days = inventory.filter((item) => calcRisk(calcDays(item.predictedStockoutDate)) === "High").length;
   
   const overdueOrdersCount = inventory.filter((item) => {
@@ -120,7 +119,14 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
     return true;
   });
 
-  const sortedFilteredInventory = sortField === "none" ? filteredInventory : [...filteredInventory].sort((a, b) => {
+  const sortedFilteredInventory = [...filteredInventory].sort((a, b) => {
+    if (sortField === "none") {
+      const daysA = calcDays(a.predictedStockoutDate);
+      const daysB = calcDays(b.predictedStockoutDate);
+      if (daysA !== daysB) return daysA - daysB;
+      return a.name.localeCompare(b.name);
+    }
+
     let aVal: any;
     let bVal: any;
 

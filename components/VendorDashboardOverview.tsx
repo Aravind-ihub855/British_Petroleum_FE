@@ -11,6 +11,7 @@ interface VendorDashboardOverviewProps {
 
 export default function VendorDashboardOverview({ onNavigate }: VendorDashboardOverviewProps) {
   const { vendors, stores, masterProducts, allInventory, purchaseOrders, vendorIssues, recommendations, loading } = useData();
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">

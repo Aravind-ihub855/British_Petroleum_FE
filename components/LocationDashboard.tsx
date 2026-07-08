@@ -15,9 +15,16 @@ export default function LocationDashboard() {
   const { stores, getStoreInventory, getLocationInventory, loading } = useData();
   const [selectedCity, setSelectedCity] = useState("");
 
+  // Normalize city name to Title Case (handles 'chicago', 'CHICAGO', 'Chicago' → 'Chicago')
+  const toTitleCase = (str: string) =>
+    str.trim().split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+
+  // Unique normalized city list derived from scoped stores
+  const availableCities = [...new Set(stores.map((s) => toTitleCase(s.city)))].sort();
+
   useEffect(() => {
-    if (stores.length > 0 && !selectedCity) {
-      setSelectedCity(stores[0].city);
+    if (availableCities.length > 0 && !selectedCity) {
+      setSelectedCity(availableCities[0]);
     }
   }, [stores, selectedCity]);
 
@@ -100,10 +107,10 @@ export default function LocationDashboard() {
             onChange={(e) => setSelectedCity(e.target.value)}
             className="bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 py-2 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-bp-green transition duration-150 shadow-sm"
           >
-            <option>Chicago</option>
-            <option>Houston</option>
-            <option>Los Angeles</option>
-            <option>Denver</option>
+            {/* Cities from backend-scoped stores — normalized to Title Case, region-filtered */}
+            {availableCities.map((city) => (
+              <option key={city} value={city}>{city}</option>
+            ))}
           </select>
         </div>
       </div>

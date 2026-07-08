@@ -165,7 +165,12 @@ export default function Home() {
       {/* Sidebar navigation */}
       <Sidebar
         activeTab={activeTab}
-        setActiveTab={(tabId: string) => { setKpiDetail(null); setActiveTab(tabId); }}
+        setActiveTab={(tabId: string) => {
+          setKpiDetail(null);
+          setSelectedProductCode("");
+          setSelectedVendorName("");
+          setActiveTab(tabId);
+        }}
         user={user}
         logout={logout}
         isOpen={isSidebarOpen}
