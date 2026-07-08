@@ -320,9 +320,10 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
           <div className="flex items-center justify-around flex-grow gap-4 py-3">
             <div className="relative w-32 h-32 flex-shrink-0">
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="40" stroke="#f8fafc" strokeWidth="12" fill="transparent" />
+                <circle cx="50" cy="50" r="46" stroke="#f8fafc" strokeWidth="1" fill="transparent" />
+                <circle cx="50" cy="50" r="40" stroke="#f1f5f9" strokeWidth="9" fill="transparent" />
                 {riskDonutSegments.map((segment) => (
-                  <circle key={segment.label} cx="50" cy="50" r="40" stroke={segment.color} strokeWidth="12"
+                  <circle key={segment.label} cx="50" cy="50" r="40" stroke={segment.color} strokeWidth="9"
                     strokeDasharray={`${segment.length} ${circumference}`} strokeDashoffset={segment.offset}
                     strokeLinecap="round" fill="transparent" className="transition-opacity duration-150 hover:opacity-85">
                     <title>{`${segment.label}: ${segment.value} (${segment.percent}%)`}</title>
@@ -357,9 +358,10 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
           <div className="flex items-center justify-around flex-grow gap-4 py-3">
             <div className="relative w-32 h-32 flex-shrink-0">
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="40" stroke="#f8fafc" strokeWidth="12" fill="transparent" />
+                <circle cx="50" cy="50" r="46" stroke="#f8fafc" strokeWidth="1" fill="transparent" />
+                <circle cx="50" cy="50" r="40" stroke="#f1f5f9" strokeWidth="9" fill="transparent" />
                 {fsnDonutSegments.map((segment) => (
-                  <circle key={segment.label} cx="50" cy="50" r="40" stroke={segment.color} strokeWidth="12"
+                  <circle key={segment.label} cx="50" cy="50" r="40" stroke={segment.color} strokeWidth="9"
                     strokeDasharray={`${segment.length} ${circumference}`} strokeDashoffset={segment.offset}
                     strokeLinecap="round" fill="transparent" className="transition-opacity duration-150 hover:opacity-85">
                     <title>{`${segment.label}: ${segment.value} (${segment.percent}%)`}</title>

@@ -69,9 +69,13 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
   const atRiskCount = inventory.filter((item) => item.prMrStatus === "PR").length;
   const stockoutIn7Days = inventory.filter((item) => calcRisk(calcDays(item.predictedStockoutDate)) === "High").length;
   
-  const serviceLevel = totalProducts > 0
-    ? (inventory.reduce((sum, item) => sum + item.serviceLevel, 0) / totalProducts).toFixed(1)
-    : "95.0";
+  const overdueOrdersCount = inventory.filter((item) => {
+    const parts = item.orderByDate.split("-");
+    if (parts.length !== 3) return false;
+    const orderDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+    orderDate.setHours(0, 0, 0, 0);
+    return orderDate.getTime() < TODAY.getTime();
+  }).length;
 
   const getFsnCategory = (avgDaily: number): "Fast Moving" | "Slow Moving" | "Non Moving" => {
     if (avgDaily >= 25.0) return "Fast Moving";
@@ -216,16 +220,19 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
           <span className="text-3xl font-extrabold tracking-tight text-slate-900 mt-2">{totalProducts}</span>
         </div>
         <div className="bg-white p-5 rounded-2xl border-t-4 border-t-orange-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
-          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Below ROL (PR)</span>
+          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Below ROL (PR Needed)</span>
           <span className="text-3xl font-extrabold tracking-tight text-slate-900 mt-2">{atRiskCount}</span>
+          <p className="text-[9.5px] text-rose-500 font-bold mt-1.5 uppercase tracking-wide">Purchase Requests Required</p>
         </div>
         <div className="bg-white p-5 rounded-2xl border-t-4 border-t-rose-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
           <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Stockout in 7 Days</span>
           <span className="text-3xl font-extrabold tracking-tight text-rose-600 mt-2">{stockoutIn7Days}</span>
+          <p className="text-[9.5px] text-rose-500 font-bold mt-1.5 uppercase tracking-wide">Products </p>
         </div>
-        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-emerald-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
-          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Service Level</span>
-          <span className="text-3xl font-extrabold tracking-tight text-emerald-600 mt-2">{serviceLevel}%</span>
+        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-rose-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
+          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Overdue Orders</span>
+          <span className="text-3xl font-extrabold tracking-tight text-rose-600 mt-2">{overdueOrdersCount}</span>
+          <p className="text-[9.5px] text-rose-500 font-bold mt-1.5 uppercase tracking-wide">Orders Past Deadline</p>
         </div>
       </div>
 
@@ -245,10 +252,11 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
                 <th className="py-3.5 px-4 text-center">UOM</th>
                 <th className="py-3.5 px-4 text-right">Current Stock</th>
                 <th className="py-3.5 px-4 text-right">Safety Stock</th>
-                <th className="py-3.5 px-4 text-right">Avg Daily</th>
+                <th className="py-3.5 px-4 text-right">Avg Daily Consumption</th>
                 <th className="py-3.5 px-4 text-center">Stockout Date</th>
                 <th className="py-3.5 px-4 text-center">Days Left</th>
                 <th className="py-3.5 px-4 text-right">ROQ</th>
+                <th className="py-3.5 px-4 text-center">Lead Time</th>
                 <th className="py-3.5 px-4 text-center">Order By</th>
                 <th className="py-3.5 px-4 text-center">Status</th>
                 <th className="py-3.5 px-6 text-center">Risk Level</th>
@@ -312,18 +320,27 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
                       }`}>{daysLeft}</span>
                     </td>
                     <td className="py-4 px-4 text-right font-bold text-bp-green">{row.recommendedRoq}</td>
+                    <td className="py-4 px-4 text-center text-slate-500 font-medium">
+                      {row.leadTimeDays} {row.leadTimeDays === 1 ? "day" : "days"}
+                    </td>
                     <td className="py-4 px-4 text-center">
-                      <div className={`font-bold ${isOverdue ? "text-rose-600" : isToday ? "text-amber-600" : "text-slate-800"}`}>
-                        {(() => {
-                          const parts = row.orderByDate.split("-");
-                          if (parts.length !== 3) return row.orderByDate;
-                          const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                          const mName = months[parseInt(parts[1]) - 1] || "";
-                          return `${parts[0]} ${mName} ${parts[2]}`;
-                        })()}
-                      </div>
-                      <div className="text-[10px] text-slate-400 font-medium mt-0.5">
-                        ({row.leadTimeDays} {row.leadTimeDays === 1 ? "day" : "days"} lead time)
+                      <div className="flex flex-col items-center">
+                        <div className={`font-bold ${isOverdue ? "text-rose-600" : isToday ? "text-amber-600" : "text-slate-800"}`}>
+                          {(() => {
+                            const parts = row.orderByDate.split("-");
+                            if (parts.length !== 3) return row.orderByDate;
+                            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                            const mName = months[parseInt(parts[1]) - 1] || "";
+                            return `${parts[0]} ${mName} ${parts[2]}`;
+                          })()}
+                        </div>
+                        <div className="text-[10px] mt-0.5">
+                          {isOverdue ? (
+                            <span className="text-rose-600 font-bold uppercase tracking-wide">Overdue</span>
+                          ) : (
+                            <span className="text-slate-400 font-medium">({row.leadTimeDays} {row.leadTimeDays === 1 ? "day" : "days"} before stock out)</span>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="py-4 px-4 text-center">
