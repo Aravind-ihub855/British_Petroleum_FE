@@ -161,7 +161,7 @@ export default function VendorPerformance({
             <div className="bg-white rounded-3xl border-t-4 border-t-bp-green border-x border-b border-slate-100 shadow-sm overflow-hidden text-left w-full card-hover-effect">
               <div className="px-6 py-5 border-b border-slate-50">
                 <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">
-                  Vendor Capability Metrics
+                  Vendor Performance Metrics
                 </h3>
                 <p className="text-[10px] text-slate-400 font-semibold mt-0.5 leading-snug">Summary score ratings of qualified convenience store suppliers</p>
               </div>
