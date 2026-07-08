@@ -10,29 +10,8 @@ interface VendorDashboardOverviewProps {
 }
 
 export default function VendorDashboardOverview({ onNavigate }: VendorDashboardOverviewProps) {
-  const { vendors, stores, masterProducts, allInventory, loading } = useData();
-  const [procurement, setProcurement] = useState<{
-    purchaseOrders: PurchaseOrder[];
-    purchaseRequests: PurchaseRequest[];
-    issues: VendorIssue[];
-    activities: ProcurementActivity[];
-    recommendations: AIRecommendation[];
-  } | null>(null);
-
-  useEffect(() => {
-    if (!loading && vendors.length > 0 && stores.length > 0) {
-      const data = generateDBProcurementData(stores, vendors);
-      setProcurement({
-        purchaseOrders: data.purchaseOrders,
-        purchaseRequests: data.purchaseRequests,
-        recommendations: data.recommendations,
-        issues: data.issues || [],
-        activities: []
-      });
-    }
-  }, [loading, vendors, stores]);
-
-  if (loading || !procurement) {
+  const { vendors, stores, masterProducts, allInventory, purchaseOrders, vendorIssues, recommendations, loading } = useData();
+  if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
         <svg className="animate-spin h-8 w-8 text-emerald-600" fill="none" viewBox="0 0 24 24">
@@ -43,7 +22,7 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
     );
   }
 
-  const { purchaseOrders, issues, recommendations } = procurement;
+  const issues = vendorIssues || [];
   const todayStr = new Date().toISOString().split("T")[0];
 
   // 1. EXECUTIVE KPI CARDS CALCULATIONS
