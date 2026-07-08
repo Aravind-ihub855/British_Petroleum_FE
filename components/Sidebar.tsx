@@ -89,7 +89,7 @@ export const getRoleAllowedTabs = (role: string): string[] => {
     case "store manager":
       return ["1", "2", "4", "5"];
     case "vendor manager":
-      return ["2", "3"];
+      return ["1", "2", "3", "4", "5"];
     case "regional head":
       return ["1", "2", "3", "4", "5"];
     case "retail head":
@@ -143,7 +143,7 @@ export default function Sidebar({
           <div className="flex items-center gap-2.5">
             <img src="/logo/BP.svg" alt="BP Logo" className="w-6.5 h-6.5 object-contain" />
             <span className="font-extrabold text-sm text-slate-900 tracking-tight font-sans">
-              bp Convenience
+              BP Convenience
             </span>
           </div>
           {/* Mobile close button */}
@@ -175,9 +175,9 @@ export default function Sidebar({
                       setActiveTab(item.id);
                       onClose();
                     }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition duration-150 font-semibold text-sm text-left border-2 ${
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition duration-150 font-semibold text-sm text-left border-2 outline-none focus-visible:ring-2 focus-visible:ring-bp-green/50 ${
                       isSelected
-                        ? "bg-bp-green/5 border-bp-green text-slate-955 shadow-sm"
+                        ? "bg-bp-green/5 border-bp-green text-slate-900 shadow-sm"
                         : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50"
                     }`}
                   >
@@ -209,9 +209,9 @@ export default function Sidebar({
                       setActiveTab(item.id);
                       onClose();
                     }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition duration-150 font-semibold text-sm text-left border-2 ${
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition duration-150 font-semibold text-sm text-left border-2 outline-none focus-visible:ring-2 focus-visible:ring-bp-green/50 ${
                       isSelected
-                        ? "bg-bp-green/5 border-bp-green text-slate-955 shadow-sm"
+                        ? "bg-bp-green/5 border-bp-green text-slate-900 shadow-sm"
                         : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50"
                     }`}
                   >

@@ -582,3 +582,167 @@ export function getProductsForVendor(vendorId: string): VendorProductLink[] {
   
   return links.sort((a, b) => b.overallScore - a.overallScore);
 }
+
+// 9. Procurement Models
+
+export interface PurchaseOrder {
+  id: string;
+  vendorId: string;
+  vendorName: string;
+  status: "Pending Approval" | "Approved" | "In Transit" | "Delivered" | "Delayed" | "Cancelled";
+  amount: number;
+  expectedDeliveryDate: string;
+  actualDeliveryDate?: string;
+  orderDate: string;
+  expectedItems: number;
+  receivedItems: number;
+}
+
+export interface PurchaseRequest {
+  id: string;
+  storeId: string;
+  storeName: string;
+  priority: "High" | "Medium" | "Low";
+  amount: number;
+  requestedDate: string;
+  status: "Pending" | "Approved" | "Rejected";
+}
+
+export interface VendorIssue {
+  id: string;
+  priority: "High" | "Medium" | "Low";
+  vendorId: string;
+  vendorName: string;
+  issueType: string;
+  dateReported: string;
+  status: "Open" | "In Progress" | "Resolved";
+  assignedTo: string;
+}
+
+export interface ProcurementActivity {
+  id: string;
+  timestamp: string;
+  type: string;
+  reference: string;
+  status: string;
+}
+
+export interface AIRecommendation {
+  id: string;
+  recommendation: string;
+  reason: string;
+  priority: "High" | "Medium" | "Low";
+  actionLabel: string;
+}
+
+// Generate deterministically
+export function getProcurementData() {
+  const purchaseOrders: PurchaseOrder[] = [];
+  const purchaseRequests: PurchaseRequest[] = [];
+  const issues: VendorIssue[] = [];
+  
+  // Generate POs based on vendors
+  vendors.forEach((v, idx) => {
+    const seed = getSeedHash(v.id);
+    
+    // 15-30 POs per vendor to provide rich graph data
+    const poCount = 15 + (seed % 16);
+    for (let i = 0; i < poCount; i++) {
+      let status: PurchaseOrder["status"] = "Delivered";
+      const sHash = (seed + i) % 100;
+      if (sHash < 15) status = "Pending Approval";
+      else if (sHash < 35) status = "Approved";
+      else if (sHash < 55) status = "In Transit";
+      else if (sHash < 65) status = "Delayed";
+      else if (sHash < 70) status = "Cancelled";
+      
+      const now = new Date();
+      // Generate a date offset between -40 and +10 days
+      const daysOffset = (sHash % 50) - 40;
+      const orderDate = new Date(now);
+      orderDate.setDate(now.getDate() + daysOffset);
+      
+      const expectedDate = new Date(orderDate);
+      expectedDate.setDate(orderDate.getDate() + 5 + (sHash % 10)); // 5 to 14 days lead time
+      
+      let actualDate: Date | undefined;
+      
+      if (status === "Delivered") {
+        actualDate = new Date(expectedDate);
+        // 80% chance of on-time, 20% delayed
+        if (sHash % 5 === 0) {
+          actualDate.setDate(expectedDate.getDate() + 1 + (sHash % 5)); // Delayed 1-5 days
+        } else {
+          actualDate.setDate(expectedDate.getDate() - (sHash % 3)); // Early or on-time
+        }
+      } else if (status === "Delayed") {
+          // If still marked as Delayed, actual delivery hasn't happened yet, but we'll mock it if we wanted to
+      }
+      
+      const expectedItems = 50 + (sHash * 3);
+      // Fill rate simulation: most are 100%, some are short
+      const receivedItems = (sHash % 10 === 0) ? Math.floor(expectedItems * (0.8 + ((sHash % 20) / 100))) : expectedItems;
+
+      purchaseOrders.push({
+        id: `PO-${10000 + idx * 10 + i}`,
+        vendorId: v.id,
+        vendorName: v.name,
+        status,
+        amount: 5000 + (sHash * 123),
+        expectedDeliveryDate: expectedDate.toISOString().split("T")[0],
+        actualDeliveryDate: actualDate ? actualDate.toISOString().split("T")[0] : undefined,
+        orderDate: orderDate.toISOString().split("T")[0],
+        expectedItems,
+        receivedItems: status === "Delivered" ? receivedItems : 0
+      });
+    }
+    
+    // Generate Issues
+    if (seed % 10 < 3) {
+      const issueTypes = ["Shipment delayed", "Invoice mismatch", "Quality complaint", "Contract expires soon"];
+      issues.push({
+        id: `ISS-${1000 + idx}`,
+        priority: (seed % 3 === 0) ? "High" : (seed % 3 === 1) ? "Medium" : "Low",
+        vendorId: v.id,
+        vendorName: v.name,
+        issueType: issueTypes[seed % issueTypes.length],
+        dateReported: `2024-03-${10 + (seed % 10)}`,
+        status: (seed % 2 === 0) ? "Open" : "In Progress",
+        assignedTo: "Procurement Team"
+      });
+    }
+  });
+
+  // Generate PRs based on stores
+  stores.forEach((st, idx) => {
+    const seed = getSeedHash(st.id);
+    if (seed % 3 !== 0) {
+      purchaseRequests.push({
+        id: `PR-${5000 + idx}`,
+        storeId: st.id,
+        storeName: st.name,
+        priority: (seed % 5 === 0) ? "High" : (seed % 2 === 0) ? "Medium" : "Low",
+        amount: 1500 + (seed * 47) % 5000,
+        requestedDate: `2024-03-${15 + (seed % 5)}`,
+        status: "Pending"
+      });
+    }
+  });
+
+  const activities: ProcurementActivity[] = [
+    { id: "A1", timestamp: "09:10 AM", type: "Approval", reference: "PO-10234", status: "Approved" },
+    { id: "A2", timestamp: "09:45 AM", type: "Delivery", reference: "VND-002 Shipment", status: "Received" },
+    { id: "A3", timestamp: "10:20 AM", type: "Finance", reference: "Invoice #8892", status: "Verified" },
+    { id: "A4", timestamp: "11:15 AM", type: "Request", reference: "PR-5012", status: "Created" },
+    { id: "A5", timestamp: "12:30 PM", type: "Contract", reference: "VND-014", status: "Updated" },
+  ];
+
+  const recommendations: AIRecommendation[] = [
+    { id: "R1", recommendation: "Approve PO #10042", reason: "Critical low stock for Fast Moving item.", priority: "High", actionLabel: "Approve" },
+    { id: "R2", recommendation: "Expedite delivery from VND-003", reason: "Historical delay probability is 45%.", priority: "High", actionLabel: "Expedite" },
+    { id: "R3", recommendation: "Review VND-010 SLA", reason: "Fill rate dropped below 90% target.", priority: "Medium", actionLabel: "Review" },
+    { id: "R4", recommendation: "Convert PR-5002 to PO", reason: "Store stockout risk in 2 days.", priority: "High", actionLabel: "Convert" },
+  ];
+
+  return { purchaseOrders, purchaseRequests, issues, activities, recommendations };
+}

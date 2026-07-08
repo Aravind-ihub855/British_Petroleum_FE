@@ -6,6 +6,8 @@
   --color-bp-green-light: #10b981;
   --color-bp-yellow: #FFD200;
   --color-bp-cream: #fcfcf9;
+  
+  --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
 }
 
 @keyframes fadeIn {
