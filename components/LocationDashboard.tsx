@@ -121,9 +121,9 @@ export default function LocationDashboard({ onNavigate }: LocationDashboardProps
           <h2 className="text-sm font-extrabold text-slate-900 tracking-tight">
             Location-Level Analysis
           </h2>
-          <p className="text-[10px] text-slate-400 font-semibold mt-0.5 leading-snug">
+          {/* <p className="text-[10px] text-slate-400 font-semibold mt-0.5 leading-snug">
             Select a city boundary to review localized performance.
-          </p>
+          </p> */}
         </div>
         <div className="flex items-center gap-2.5">
           <span className="text-xs font-bold text-slate-500">Select City</span>

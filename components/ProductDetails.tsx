@@ -400,10 +400,10 @@ export default function ProductDetails({ productCode, onBack }: ProductDetailsPr
               <span className="text-slate-400 font-medium">Safety Stock</span>
               <span>{item.safetyStockLevel} {item.uom}</span>
             </div>
-            <div className="flex justify-between items-center py-0.5">
+            {/* <div className="flex justify-between items-center py-0.5">
               <span className="text-slate-400 font-medium">Min. Stock to Avoid Stockout</span>
               <span>{item.safetyStockLevel} {item.uom}</span>
-            </div>
+            </div> */}
           </div>
         </div>
 

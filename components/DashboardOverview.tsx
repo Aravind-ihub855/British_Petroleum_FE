@@ -195,7 +195,25 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
     });
     if (riskCount > 0) allAtRiskItems.push({ name: prod.name, code: prod.code, storesCount: riskCount, soonestDate: soonestStr, daysRemaining: soonestDays, timestamp: soonestTimestamp });
   });
-  const topAtRiskProducts = allAtRiskItems.sort((a, b) => a.timestamp - b.timestamp).slice(0, 5);
+  const storeManagerTopAtRiskItems = [...allItems]
+    .filter((item) => item.riskLevel === "High")
+    .sort((a, b) => {
+      if (a.daysRemaining !== b.daysRemaining) return a.daysRemaining - b.daysRemaining;
+      return a.name.localeCompare(b.name);
+    })
+    .slice(0, 5)
+    .map((item) => ({
+      name: item.name,
+      code: item.code,
+      storesCount: 1,
+      soonestDate: item.predictedStockoutDate,
+      daysRemaining: item.daysRemaining,
+      timestamp: item.daysRemaining,
+    }));
+
+  const topAtRiskProducts = isStoreManager
+    ? storeManagerTopAtRiskItems
+    : allAtRiskItems.sort((a, b) => a.timestamp - b.timestamp).slice(0, 5);
 
   const categoryRiskMap: Record<string, { le7: number; eightTo15: number; gt15: number; total: number }> = {};
   const seenCodes = new Set<string>();

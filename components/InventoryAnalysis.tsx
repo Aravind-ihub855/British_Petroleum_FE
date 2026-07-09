@@ -18,6 +18,8 @@ export default function InventoryAnalysis() {
   const isStoreManager = user?.role === "store manager";
 
   const [hoveredSegment, setHoveredSegment] = React.useState<any>(null);
+  const [selectedCity, setSelectedCity] = React.useState<string>("All Locations");
+  const [selectedStoreId, setSelectedStoreId] = React.useState<string>("All Stores");
 
   if (loading) {
     return (
@@ -30,10 +32,25 @@ export default function InventoryAnalysis() {
     );
   }
 
-  // Filter stores if user is store manager
-  const displayStores = isStoreManager && user?.storeId
+  // Cities and store lists for filtering dropdowns (Vendor side only)
+  const cities = Array.from(new Set(stores.map((s) => s.city))).filter(Boolean).sort();
+  const filteredStoresDropdown = selectedCity === "All Locations" 
+    ? stores 
+    : stores.filter((s) => s.city === selectedCity);
+
+  // Filter stores if user is store manager, or apply vendor filters
+  let displayStores = isStoreManager && user?.storeId
     ? stores.filter(s => s.id === user.storeId)
     : stores;
+
+  if (!isStoreManager) {
+    if (selectedCity !== "All Locations") {
+      displayStores = displayStores.filter((s) => s.city === selectedCity);
+    }
+    if (selectedStoreId !== "All Stores") {
+      displayStores = displayStores.filter((s) => s.id === selectedStoreId);
+    }
+  }
 
   // Dynamically compute FSN categories based on actual sales volumes
   const allStoreItemsMap: Record<string, { name: string; uom: string; stock: number; totalConsumption: number; storeCount: number }> = {};
@@ -58,17 +75,19 @@ export default function InventoryAnalysis() {
     });
   });
 
-  const uniqueItemsList = Object.values(allStoreItemsMap).map((item) => {
-    const avgConsumption = item.storeCount > 0 ? item.totalConsumption / item.storeCount : 0;
-    return {
-      name: item.name,
-      uom: item.uom,
-      stock: item.stock,
-      avgConsumption
-    };
-  });
+  const uniqueItemsList = Object.values(allStoreItemsMap)
+    .filter((item) => item.storeCount > 0)
+    .map((item) => {
+      const avgConsumption = item.totalConsumption / item.storeCount;
+      return {
+        name: item.name,
+        uom: item.uom,
+        stock: item.stock,
+        avgConsumption
+      };
+    });
 
-  const totalSKUs = masterProducts.length;
+  const totalSKUs = uniqueItemsList.length;
 
   // Classify products:
   // Fast (F): Avg daily consumption >= 25.0
@@ -132,6 +151,52 @@ export default function InventoryAnalysis() {
 
   return (
     <div className="space-y-6">
+
+      {/* Dynamic Filters Bar - Vendor Side Only */}
+      {!isStoreManager && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm text-left">
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4 text-bp-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+            </svg>
+            <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">Filter Inventory By:</span>
+          </div>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto">
+            {/* City Selector */}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Location</span>
+              <select
+                value={selectedCity}
+                onChange={(e) => {
+                  setSelectedCity(e.target.value);
+                  setSelectedStoreId("All Stores");
+                }}
+                className="bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 py-2 px-3.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-bp-green transition duration-150 shadow-sm w-full sm:w-[160px]"
+              >
+                <option value="All Locations">All Locations</option>
+                {cities.map((city) => (
+                  <option key={city} value={city}>{city}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Store Selector */}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Store</span>
+              <select
+                value={selectedStoreId}
+                onChange={(e) => setSelectedStoreId(e.target.value)}
+                className="bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 py-2 px-3.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-bp-green transition duration-150 shadow-sm w-full sm:w-[220px]"
+              >
+                <option value="All Stores">All Stores</option>
+                {filteredStoresDropdown.map((store) => (
+                  <option key={store.id} value={store.id}>{store.name} ({store.city})</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Top section: KPI Cards left (2x2 grid) and Donut Chart right */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
@@ -272,26 +337,33 @@ export default function InventoryAnalysis() {
             </h3>
             <p className="text-[10px] text-slate-400 font-medium mt-0.5">Stagnant items with longest periods since last sale</p>
           </div>
-          <div className="overflow-x-auto max-h-[450px]">
-            <table className="w-full text-[11px] text-left">
+          <div className="overflow-hidden">
+            <table className="w-full table-fixed text-[10.5px] text-left">
+              <colgroup>
+                <col className="w-[43%]" />
+                <col className="w-[13%]" />
+                <col className="w-[13%]" />
+                <col className="w-[16%]" />
+                <col className="w-[15%]" />
+              </colgroup>
               <thead className="bg-slate-50/50 text-slate-500 tracking-wider font-semibold border-b border-slate-100 sticky top-0 z-10 text-[9.5px]">
                 <tr>
-                  <th className="py-3 px-4 font-bold border-r border-slate-100">Product</th>
-                  <th className="py-3 px-3 text-center font-bold border-r border-slate-100">UOM</th>
-                  <th className="py-3 px-3 text-right font-bold border-r border-slate-100">Total Stock</th>
-                  <th className="py-3 px-3 text-center font-bold border-r border-slate-100">Last Sale</th>
-                  <th className="py-3 px-4 text-center font-bold">Days Idle</th>
+                  <th className="py-3 px-3 font-bold border-r border-slate-100">Product</th>
+                  <th className="py-3 px-2 text-center font-bold border-r border-slate-100 whitespace-nowrap">UOM</th>
+                  <th className="py-3 px-2 text-right font-bold border-r border-slate-100">Total Stock</th>
+                  <th className="py-3 px-2 text-center font-bold border-r border-slate-100 whitespace-nowrap">Last Sale</th>
+                  <th className="py-3 px-2 text-center font-bold whitespace-nowrap">Days Idle</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
                 {nonMovingItems.map((row, idx) => (
                   <tr key={idx} className="hover:bg-slate-50/40 transition duration-75">
-                    <td className="py-3 px-4 font-bold text-slate-800 border-r border-slate-100">{row.product}</td>
-                    <td className="py-3 px-3 text-center text-slate-400 font-medium border-r border-slate-100">{row.uom}</td>
-                    <td className="py-3 px-3 text-right text-slate-700 font-medium border-r border-slate-100">{row.totalStock.toLocaleString()}</td>
-                    <td className="py-3 px-3 text-center text-slate-500 font-medium border-r border-slate-100">{row.lastSale}</td>
-                    <td className="py-3 px-4 text-center">
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold border bg-rose-50 text-rose-600 border-rose-100">
+                    <td className="py-3 px-3 font-bold text-slate-800 border-r border-slate-100 leading-snug">{row.product}</td>
+                    <td className="py-3 px-2 text-center text-slate-400 font-medium border-r border-slate-100 whitespace-nowrap">{row.uom}</td>
+                    <td className="py-3 px-2 text-right text-slate-700 font-medium border-r border-slate-100 whitespace-nowrap">{row.totalStock.toLocaleString()}</td>
+                    <td className="py-3 px-2 text-center text-slate-500 font-medium border-r border-slate-100 whitespace-nowrap">{row.lastSale}</td>
+                    <td className="py-3 px-2 text-center whitespace-nowrap">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-extrabold border bg-rose-50 text-rose-600 border-rose-100 whitespace-nowrap">
                         {row.daysSince}d Idle
                       </span>
                     </td>

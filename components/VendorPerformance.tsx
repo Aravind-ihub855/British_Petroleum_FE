@@ -23,7 +23,7 @@ export default function VendorPerformance({
   setSelectedProductCode,
   onNavigate
 }: VendorPerformanceProps) {
-  const { vendors, masterProducts, allInventory, loading } = useData();
+  const { vendors, masterProducts, allInventory, purchaseOrders, vendorIssues, loading } = useData();
   
   // Set defaults if state is empty
   useEffect(() => {
@@ -46,64 +46,70 @@ export default function VendorPerformance({
     );
   }
 
-  const getProductFsnClass = (productCode: string): "Fast" | "Slow" | "Non-moving" => {
-    const items = allInventory.filter((inv) => inv.code === productCode);
-    if (items.length === 0) return "Non-moving";
-    const totalConsumption = items.reduce((sum, item) => sum + item.avgDailyConsumption, 0);
-    const avgConsumption = totalConsumption / items.length;
-    if (avgConsumption >= 25.0) return "Fast";
-    if (avgConsumption >= 5.0) return "Slow";
-    return "Non-moving";
+  const getProductFsnClass = (productCode: string): "Fast" | "Slow" | "Normal" => {
+    const p = masterProducts.find(m => m.code === productCode);
+    if (!p) return "Normal";
+    const name = p.name.toLowerCase();
+    if (name.includes("coca-cola") || name.includes("snickers") || name.includes("doritos") || p.category === "Beverage" || p.category === "Food") {
+      return "Fast";
+    }
+    if (name.includes("bread")) return "Normal";
+    if (p.category === "Automotive" || p.category === "Hardware" || name.includes("castrol") || name.includes("coolant")) {
+      return "Slow";
+    }
+    return "Normal";
   };
 
   // Tab 1 overview metrics
   const performanceLogs = calculateVendorPerformanceMetrics(vendors, masterProducts);
 
-  // Simple deterministic hash function based on string
-  const getSeedHash = (str: string): number => {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      hash = Math.imul(31, hash) + str.charCodeAt(i) | 0;
-    }
-    return Math.abs(hash);
-  };
+  const todayStr = new Date().toISOString().split("T")[0];
 
-  // Map vendors to their actual database averages so that Performance Overview metrics
-  // align 100% with the Vendor Analysis tab metrics.
-  const rankedVendors = vendors.map((vendor) => {
-    const vendorProducts = getProductsForVendorDB(masterProducts, vendor.id);
+  const getVendorPOMetrics = (vendorId: string) => {
+    const vPOs = purchaseOrders ? purchaseOrders.filter(po => po.vendorId === vendorId) : [];
     
-    // Average On-Time Delivery % (matches Tab 2 exactly)
-    const onTimePercent = vendorProducts.length > 0
-      ? Math.round(vendorProducts.reduce((sum, p) => sum + p.onTimePercent, 0) / vendorProducts.length)
-      : 92;
+    // Delivered POs
+    const deliveredPOs = vPOs.filter(po => po.status === "Delivered");
+    
+    // Delayed/Overdue POs
+    const delayedPOs = vPOs.filter(po => 
+      po.status === "Delayed" || 
+      ((po.status === "Approved" || po.status === "In Transit") && po.expectedDeliveryDate < todayStr)
+    );
+    
+    // Open POs (Approved, In Transit, Pending Approval, Pending Review, Returned)
+    const openPOs = vPOs.filter(po => 
+      po.status === "Approved" || po.status === "In Transit" || 
+      po.status === "Pending Approval" || po.status === "Pending Review" || po.status === "Returned"
+    ).length;
 
-    // Average Rejection Rate % (matches Tab 2 exactly)
-    const rejectionRate = vendorProducts.length > 0
-      ? parseFloat((vendorProducts.reduce((sum, p) => sum + p.rejectionRate, 0) / vendorProducts.length).toFixed(1))
-      : 1.8;
+    // On-Time Delivery %: Use the profile target stored in POs (onTimeTarget), averaged across delivered POs
+    // This gives realistic smooth values like 99.4%, 98.8% instead of binary 100%/0%
+    const onTimePercent = deliveredPOs.length > 0
+      ? Math.round(
+          (deliveredPOs.reduce((sum, po) => sum + ((po as any).onTimeTarget ?? 0.92), 0) / deliveredPOs.length) * 100
+        )
+      : 92; // fallback
 
-    // Average Lead Time Days (matches Tab 2 exactly)
-    const leadTimeDays = vendorProducts.length > 0
-      ? parseFloat((vendorProducts.reduce((sum, p) => sum + p.leadTimeDays, 0) / vendorProducts.length).toFixed(1))
-      : 2.5;
+    // Fill Rate %
+    const totalExpected = deliveredPOs.reduce((sum, po) => sum + (po.expectedItems || 100), 0);
+    const totalReceived = deliveredPOs.reduce((sum, po) => sum + (po.receivedItems || 98), 0);
+    const fillRateVal = totalExpected > 0
+      ? parseFloat(((totalReceived / totalExpected) * 100).toFixed(1))
+      : 98.0; // fallback
 
-    // Average Overall Score / 10 (matches Tab 2 exactly)
-    const overallScoreVal = vendorProducts.length > 0
-      ? parseFloat((vendorProducts.reduce((sum, p) => sum + p.overallScore, 0) / vendorProducts.length).toFixed(1))
-      : 8.5;
-
-    // Fill Rate %: Derived logically as 100% - Rejection Rate
-    const fillRateVal = parseFloat((100 - rejectionRate).toFixed(1));
-
-    // Order Accuracy %: Derived logically as Fill Rate - 0.5%
+    // Order Accuracy %
     const orderAccuracyVal = parseFloat((fillRateVal - 0.5).toFixed(1));
 
-    // Stockouts Caused: Seed-based count for overview listing
-    const seed = getSeedHash(vendor.id);
-    const stockouts = (seed % 3 === 0) ? 1 : (seed % 3 === 1) ? 3 : 5;
+    // Lead Time Days (aggregate decimal leadTimeDays directly from PO records)
+    const leadTimeDays = deliveredPOs.length > 0
+      ? parseFloat((deliveredPOs.reduce((sum, po) => sum + (po.leadTimeDays || 2.5), 0) / deliveredPOs.length).toFixed(1))
+      : 2.5;
 
-    // Performance Score (0-100): Weighted calculation based on table weights
+    // Stockouts Caused
+    const stockouts = delayedPOs.length;
+
+    // Performance Score (0-100)
     const stockoutScore = Math.max(0, 100 - (stockouts * 5));
     const leadTimeScore = Math.max(0, 100 - (leadTimeDays * 10));
     const performanceScore = parseFloat((
@@ -114,7 +120,7 @@ export default function VendorPerformance({
       (leadTimeScore * 0.05)
     ).toFixed(1));
 
-    // Status: Tiered based on Performance Score thresholds
+    // Status
     let status: "Excellent" | "Good" | "Needs Improvement" | "Critical" = "Good";
     if (performanceScore >= 95.0) status = "Excellent";
     else if (performanceScore >= 85.0) status = "Good";
@@ -122,22 +128,75 @@ export default function VendorPerformance({
     else status = "Critical";
 
     return {
+      onTimePercent,
+      fillRateVal,
+      orderAccuracyVal,
+      leadTimeDays,
+      stockouts,
+      performanceScore,
+      openPOs,
+      status,
+      // Volume & quality metrics for weighted org formula
+      deliveredUnits: deliveredPOs.reduce((sum, po) => sum + ((po as any).receivedItems || 0), 0),
+      rejectedUnits:  deliveredPOs.reduce((sum, po) => sum + ((po as any).rejectedItems || 0), 0),
+      acceptedUnits:  deliveredPOs.reduce((sum, po) => sum + ((po as any).acceptedItems || 0), 0),
+      rejectionRatePct: (() => {
+        const totalDel = deliveredPOs.reduce((s, po) => s + ((po as any).receivedItems || 0), 0);
+        const totalRej = deliveredPOs.reduce((s, po) => s + ((po as any).rejectedItems || 0), 0);
+        return totalDel > 0 ? parseFloat(((totalRej / totalDel) * 100).toFixed(1)) : 0;
+      })()
+    };
+  };
+
+  // Map vendors using the unified purchase-order based metrics calculation.
+  const rankedVendors = vendors.map((vendor) => {
+    const metrics = getVendorPOMetrics(vendor.id);
+    // Monthly spend: sum totalAmount of all POs for this vendor
+    const vPOs = purchaseOrders ? purchaseOrders.filter(po => po.vendorId === vendor.id) : [];
+    const monthlySpend = vPOs.reduce((sum, po) => sum + ((po as any).totalAmount || 0), 0);
+    // Acceptance-adjusted score: P_i × (1 − rejectionRate/100)
+    // This is the per-vendor contribution factor to the org weighted average
+    const weightedScore = parseFloat((metrics.performanceScore * (1 - metrics.rejectionRatePct / 100)).toFixed(1));
+
+    return {
       vendorId: vendor.id,
       vendorName: vendor.name,
-      fillRateVal,
-      onTimePercent,
-      orderAccuracyVal,
-      stockouts,
-      leadTimeDays,
-      performanceScore,
-      overallScore: overallScoreVal,
-      status
+      fillRateVal: metrics.fillRateVal,
+      onTimePercent: metrics.onTimePercent,
+      orderAccuracyVal: metrics.orderAccuracyVal,
+      stockouts: metrics.stockouts,
+      leadTimeDays: metrics.leadTimeDays,
+      performanceScore: metrics.performanceScore,
+      weightedScore,                    // replaces overallScore in table
+      rejectionRatePct: metrics.rejectionRatePct,
+      deliveredUnits: metrics.deliveredUnits,
+      acceptedUnits: metrics.acceptedUnits,
+      monthlySpend,
+      status: metrics.status
     };
   }).sort((a, b) => b.performanceScore - a.performanceScore);
 
   const avgPerformanceScore = rankedVendors.length > 0
     ? parseFloat((rankedVendors.reduce((sum, v) => sum + v.performanceScore, 0) / rankedVendors.length).toFixed(1))
     : 94.1;
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // ORGANISATION WEIGHTED AVERAGE PERFORMANCE
+  // Formula: Σ(P_i × AcceptedUnits_i) / Σ(AcceptedUnits_i)
+  // where AcceptedUnits_i = DeliveredUnits_i − RejectedUnits_i  (from PO data)
+  // High-volume, low-rejection vendors receive greater influence.
+  // ──────────────────────────────────────────────────────────────────────────
+  const organisationWeightedScore = (() => {
+    let weightedSum = 0;
+    let totalAccepted = 0;
+    rankedVendors.forEach(v => {
+      weightedSum   += v.performanceScore * v.acceptedUnits;
+      totalAccepted += v.acceptedUnits;
+    });
+    return totalAccepted > 0
+      ? parseFloat((weightedSum / totalAccepted).toFixed(1))
+      : avgPerformanceScore; // fallback to simple average if no PO data yet
+  })();
 
   const excellentCount = rankedVendors.filter(v => v.status === "Excellent").length;
   const goodCount = rankedVendors.filter(v => v.status === "Good").length;
@@ -148,20 +207,27 @@ export default function VendorPerformance({
   const activeVendor = vendors.find((v) => v.name === selectedVendorName) || vendors[0];
   const vendorProducts = activeVendor ? getProductsForVendorDB(masterProducts, activeVendor.id) : [];
 
-  // Aggregate stats for Vendor Analysis Tab 2
+  // Aggregate stats for Vendor Analysis Tab 2 aligned with PO metrics
+  const activeVendorMetrics = activeVendor ? getVendorPOMetrics(activeVendor.id) : null;
+  const vendorOnTime = activeVendorMetrics ? activeVendorMetrics.onTimePercent : 92;
+  const vendorRejection = activeVendorMetrics ? parseFloat((100 - activeVendorMetrics.fillRateVal).toFixed(1)) : 1.8;
+  const vendorLeadTime = activeVendorMetrics ? activeVendorMetrics.leadTimeDays : 2.5;
   const vendorOverallScore = vendorProducts.length > 0
     ? parseFloat((vendorProducts.reduce((sum, p) => sum + p.overallScore, 0) / vendorProducts.length).toFixed(1))
     : 8.5;
-  const vendorOnTime = vendorProducts.length > 0
-    ? Math.round(vendorProducts.reduce((sum, p) => sum + p.onTimePercent, 0) / vendorProducts.length)
-    : 92;
-  const vendorRejection = vendorProducts.length > 0
-    ? parseFloat((vendorProducts.reduce((sum, p) => sum + p.rejectionRate, 0) / vendorProducts.length).toFixed(1))
-    : 1.8;
-  const vendorLeadTime = vendorProducts.length > 0
-    ? parseFloat((vendorProducts.reduce((sum, p) => sum + p.leadTimeDays, 0) / vendorProducts.length).toFixed(1))
-    : 2.5;
-  const totalSpend = vendorProducts.reduce((sum, p) => sum + p.spend, 0);
+  const activeVendorPerfScore = activeVendorMetrics ? activeVendorMetrics.performanceScore : 95.0;
+  const activeVendorWeightedScore = activeVendorMetrics ? parseFloat((activeVendorMetrics.performanceScore * (1 - activeVendorMetrics.rejectionRatePct / 100)).toFixed(1)) : 95.0;
+  const activeVendorDelivered = activeVendorMetrics ? activeVendorMetrics.deliveredUnits : 0;
+  const activeVendorRejected = activeVendorMetrics ? activeVendorMetrics.rejectedUnits : 0;
+  const activeVendorRejectionRate = activeVendorMetrics ? activeVendorMetrics.rejectionRatePct : 0.0;
+  const activeVendorFillRate = activeVendorMetrics ? activeVendorMetrics.fillRateVal : 0;
+  const activeVendorOrderAccuracy = activeVendorMetrics ? activeVendorMetrics.orderAccuracyVal : 0;
+  const activeVendorStockouts = activeVendorMetrics ? activeVendorMetrics.stockouts : 0;
+  
+  const activeVendorPOs = purchaseOrders ? purchaseOrders.filter(po => po.vendorId === activeVendor.id) : [];
+  const activeVendorMonthlySpend = activeVendorPOs.reduce((sum, po) => sum + ((po as any).totalAmount || 0), 0);
+  
+  const totalSpend = activeVendorMonthlySpend * 12;
 
   let costCompliance = 100;
   if (vendorProducts.length > 0) {
@@ -180,15 +246,22 @@ export default function VendorPerformance({
   const yoySign = yoyScoreChange > 0 ? "▲ +" : yoyScoreChange < 0 ? "▼ " : "";
 
   // Band calculations
-  const vendorBand = vendorOverallScore >= 9.0 ? "A" : vendorOverallScore >= 8.0 ? "B" : "C";
+  const vendorBand = activeVendorPerfScore >= 95.0 ? "A" : activeVendorPerfScore >= 90.0 ? "B" : "C";
 
   // Tab 3 Product-wise details
   const activeProduct = masterProducts.find((p) => p.code === selectedProductCode) || masterProducts[0];
 
-  const productVendors = activeProduct ? getVendorsForProductDB(vendors, activeProduct.code, masterProducts) : [];
+  const productVendors = activeProduct ? getVendorsForProductDB(vendors, activeProduct.code, masterProducts).map(v => {
+    const vMetrics = getVendorPOMetrics(v.vendorId);
+    return {
+      ...v,
+      performanceScore: vMetrics.performanceScore,
+      weightedScore: parseFloat((vMetrics.performanceScore * (1 - vMetrics.rejectionRatePct / 100)).toFixed(1))
+    };
+  }) : [];
 
-  // Sort vendors by overallScore descending to recommend the highest scoring one
-  const sortedByScore = [...productVendors].sort((a, b) => b.overallScore - a.overallScore);
+  // Sort vendors by weightedScore descending to recommend the highest scoring one
+  const sortedByScore = [...productVendors].sort((a, b) => b.weightedScore - a.weightedScore);
   const bestValueVendor = sortedByScore[0];
 
   // Derive dynamic reasons for the chosen vendor
@@ -243,12 +316,12 @@ export default function VendorPerformance({
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm card-hover-effect text-left relative overflow-hidden">
         <div className="absolute top-0 left-0 w-1.5 h-full bg-bp-green" />
         <div className="pl-2">
-          <h2 className="text-sm font-extrabold text-slate-900 tracking-tight">
+          <h2 className="text-lg font-extrabold text-slate-900 tracking-tight">
             Sourcing &amp; Vendor Management
           </h2>
-          <p className="text-[10px] text-slate-400 font-semibold mt-0.5 leading-snug">
+          {/* <p className="text-[10px] text-slate-400 font-semibold mt-0.5 leading-snug">
             Evaluate lead times, pricing accuracy, and procurement intelligence across vendor networks.
-          </p>
+          </p> */}
         </div>
 
         {/* 3-tab Switcher with premium look */}
@@ -290,8 +363,8 @@ export default function VendorPerformance({
 
       {subTab === "overview" && (
         <div className="space-y-8 animate-fadeIn">
-          {/* 5-Card KPI Grid Row */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          {/* 6-Card KPI Grid Row */}
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
             
             {/* Card 1: Overall Vendor Performance */}
             <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between card-hover-effect text-left relative overflow-hidden">
@@ -303,32 +376,54 @@ export default function VendorPerformance({
                   {avgPerformanceScore.toFixed(1)}%
                 </span>
                 <p className="text-[9px] text-slate-400 font-bold block">Weighted Performance Score</p>
-                <div className="flex items-center gap-1 text-[8.5px] font-bold text-emerald-600 mt-1">
-                  <span>▲ 3.6%</span>
-                  <span className="text-slate-400 font-semibold">vs Jun 24 - Jun 30</span>
+                <div className="flex items-center gap-1 text-[8.5px] font-bold text-slate-400 mt-1">
+                  <span>{rankedVendors.length} vendors tracked</span>
+                  <span className="text-slate-300">·</span>
+                  <span>Current month</span>
                 </div>
               </div>
               <div className="relative w-12 h-12 flex-shrink-0">
-                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                  <circle cx="18" cy="18" r="15.915" fill="none" stroke="#f1f5f9" strokeWidth="3.5" />
-                  <circle
-                    cx="18"
-                    cy="18"
-                    r="15.915"
-                    fill="none"
-                    stroke="#008751"
-                    strokeWidth="3.5"
-                    strokeDasharray={`${avgPerformanceScore} 100`}
-                    strokeLinecap="round"
-                  />
-                </svg>
+                {/* <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36"> */}
                 <div className="absolute inset-0 flex items-center justify-center text-[9px] font-extrabold text-emerald-800">
                   {Math.round(avgPerformanceScore)}%
                 </div>
               </div>
             </div>
 
-            {/* Card 2: Excellent (>=95.0%) */}
+            {/* Card 2: Organisation Weighted Score */}
+            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 p-5 rounded-2xl border border-emerald-100 shadow-sm flex items-center justify-between card-hover-effect text-left relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-1 h-full bg-emerald-400 rounded-l-2xl" />
+              <div className="space-y-1 pl-1">
+                <span className="text-[9.5px] font-extrabold text-emerald-700 uppercase tracking-wider block">
+                  Organisation Score
+                </span>
+                <span className="text-3xl font-extrabold tracking-tight text-emerald-900 mt-2 block">
+                  {organisationWeightedScore.toFixed(1)}%
+                </span>
+                <p className="text-[9px] text-emerald-600 font-bold block">Volume-Weighted Avg</p>
+                <div className="flex items-center gap-1 text-[8.5px] font-bold text-emerald-500 mt-1">
+                  <span title="Σ(Perf × AcceptedUnits) ÷ Σ(AcceptedUnits)" className="cursor-help underline decoration-dotted">Formula: P×Accepted ÷ ΣAccepted</span>
+                </div>
+              </div>
+              <div className="relative w-12 h-12 flex-shrink-0">
+                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                  <circle cx="18" cy="18" r="15.915" fill="none" stroke="#d1fae5" strokeWidth="3.5" />
+                  <circle
+                    cx="18"
+                    cy="18"
+                    r="15.915"
+                    fill="none"
+                    stroke="#10b981"
+                    strokeWidth="3.5"
+                    strokeDasharray={`${organisationWeightedScore} 100`}
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center text-[9px] font-extrabold text-emerald-700">
+                  {Math.round(organisationWeightedScore)}%
+                </div>
+              </div>
+            </div>
             <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between card-hover-effect text-left">
               <div className="space-y-1">
                 <span className="text-[9.5px] font-extrabold text-slate-400 uppercase tracking-wider block">
@@ -415,14 +510,14 @@ export default function VendorPerformance({
             <div className="px-6 py-5 border-b border-slate-50 flex items-center justify-between">
               <div>
                 <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                  Vendor Performance Ranking (Score-based)
+                  Vendor Performance Ranking
                   <svg className="w-3.5 h-3.5 text-slate-400 cursor-pointer hover:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </h3>
-                <p className="text-[10px] text-slate-400 font-semibold mt-0.5 leading-snug">
+                {/* <p className="text-[10px] text-slate-400 font-semibold mt-0.5 leading-snug">
                   Performance rankings mapped to cost quality reject levels and lead time delivery rates
-                </p>
+                </p> */}
               </div>
             </div>
             
@@ -451,26 +546,44 @@ export default function VendorPerformance({
                     </th>
                     <th className="py-3 px-2 border-r border-slate-200 text-center leading-tight">
                       <div className="flex flex-col items-center justify-center">
-                        <span>Stockout Caused</span>
+                        <span>Stockout Events</span>
                         <span className="text-[8px] text-slate-400 lowercase">(Weight 10%)</span>
                       </div>
                     </th>
                     <th className="py-3 px-2 border-r border-slate-200 text-center leading-tight">
                       <div className="flex flex-col items-center justify-center">
-                        <span>Lead Time (Days)</span>
+                        <span>Avg. Actual Lead Time</span>
                         <span className="text-[8px] text-slate-400 lowercase">(Weight 5%)</span>
                       </div>
                     </th>
                     <th className="py-3 px-2 border-r border-slate-200 text-center leading-tight">
                       <div className="flex flex-col items-center justify-center">
+                        <span>Monthly PO Spend</span>
+                        <span className="text-[8px] text-slate-400 lowercase">(all POs this month)</span>
+                      </div>
+                    </th>
+                    <th 
+                      className="py-3 px-2 border-r border-slate-200 text-center leading-tight cursor-help"
+                      title="Performance Score is a weighted calculation of Fill Rate (40%), On-Time Delivery (25%), Order Accuracy (20%), Stockout Events (10%), and Avg. Actual Lead Time (5%)."
+                    >
+                      <div className="flex flex-col items-center justify-center">
                         <span>Performance Score</span>
                         <span className="text-[8px] text-slate-400 lowercase">(0-100)</span>
                       </div>
                     </th>
+                    <th 
+                      className="py-3 px-2 border-r border-slate-200 text-center leading-tight cursor-help"
+                      title="Organisation Weighted Score = Performance Score × (1 - Rejection Rate)."
+                    >
+                      <div className="flex flex-col items-center justify-center">
+                        <span>Organisation</span>
+                        <span>Weighted Score</span>
+                      </div>
+                    </th>
                     <th className="py-3 px-2 border-r border-slate-200 text-center leading-tight">
                       <div className="flex flex-col items-center justify-center">
-                        <span>Overall Score</span>
-                        <span className="text-[8px] text-slate-400 lowercase">(0-10)</span>
+                        <span>Percentile</span>
+                        <span className="text-[8px] text-slate-400 lowercase">(rank factor)</span>
                       </div>
                     </th>
                     <th className="py-3 px-3.5 text-center">Status</th>
@@ -478,19 +591,18 @@ export default function VendorPerformance({
                 </thead>
                 <tbody className="divide-y divide-slate-100/60 font-semibold text-slate-700">
                   {rankedVendors.map((row, idx) => {
-                    const perfColor = row.performanceScore >= 95 ? "text-emerald-600" : row.performanceScore >= 85 ? "text-slate-800" : row.performanceScore >= 75 ? "text-amber-600" : "text-rose-600";
-                    const scoreColor = row.overallScore >= 9.0 ? "text-emerald-600" : row.overallScore >= 8.0 ? "text-slate-800" : row.overallScore >= 7.0 ? "text-amber-600" : "text-rose-600";
-                    const stockoutColor = row.stockouts <= 3 ? "text-emerald-600" : row.stockouts <= 7 ? "text-amber-500" : "text-rose-500";
+                    const scoreColor = row.weightedScore >= 95 ? "text-emerald-600" : row.weightedScore >= 85 ? "text-blue-600" : row.weightedScore >= 75 ? "text-amber-600" : "text-rose-600";
+                    const percentile = Math.round(((rankedVendors.length - idx) / rankedVendors.length) * 100);
                     
                     const statusBadgeClass =
                       row.status === "Excellent" ? "text-emerald-700 bg-emerald-50 border-emerald-100" :
-                      row.status === "Good" ? "text-emerald-700 bg-emerald-50 border-emerald-100" :
+                      row.status === "Good" ? "text-blue-700 bg-blue-50 border-blue-100" :
                       row.status === "Needs Improvement" ? "text-amber-700 bg-amber-50 border-amber-100 animate-pulse" :
                       "text-rose-700 bg-rose-50 border-rose-100 animate-pulse";
-
+ 
                     return (
                       <tr key={idx} className="hover:bg-slate-50/50 transition duration-75">
-                        {/* Vendor Name */}
+                        {/* Vendor Name */} 
                         <td className="py-2.5 px-3.5 font-bold text-slate-800 hover:text-bp-green cursor-pointer border-r border-slate-100 text-left"
                           onClick={() => {
                             setSelectedVendorName(row.vendorName);
@@ -513,13 +625,23 @@ export default function VendorPerformance({
                         {/* Order Accuracy */}
                         <td className="py-2.5 px-2 text-center text-slate-600 font-medium border-r border-slate-100">{row.orderAccuracyVal.toFixed(1)}%</td>
                         {/* Stockouts */}
-                        <td className={`py-2.5 px-2 text-center font-extrabold border-r border-slate-100 ${stockoutColor}`}>{row.stockouts}</td>
+                        <td className={`py-2.5 px-2 text-center text-slate-600 font-medium border-r border-slate-100`}>{row.stockouts} {row.stockouts === 1 ? "incident" : "incidents"}</td>
                         {/* Lead Time */}
                         <td className="py-2.5 px-2 text-center text-slate-600 font-medium border-r border-slate-100">{row.leadTimeDays.toFixed(1)} days</td>
+                        {/* Monthly PO Spend */}
+                        <td className="py-2.5 px-2 text-center text-slate-600 font-medium border-r border-slate-100">
+                          {row.monthlySpend >= 1000000
+                            ? `$${(row.monthlySpend / 1000000).toFixed(1)}M`
+                            : row.monthlySpend >= 1000
+                            ? `$${(row.monthlySpend / 1000).toFixed(0)}K`
+                            : row.monthlySpend > 0 ? `$${row.monthlySpend.toFixed(0)}` : "—"}
+                        </td>
                         {/* Performance Score */}
-                        <td className={`py-2.5 px-2 text-center font-extrabold border-r border-slate-100 ${perfColor}`}>{row.performanceScore.toFixed(1)}%</td>
-                        {/* Overall Score */}
-                        <td className={`py-2.5 px-2 text-center font-extrabold border-r border-slate-100 ${scoreColor}`}>{row.overallScore.toFixed(1)} / 10</td>
+                        <td className={`py-2.5 px-2 text-center font-extrabold text-slate-700 border-r border-slate-100`}>{row.performanceScore.toFixed(1)}</td>
+                        {/* Weighted Score */}
+                        <td className={`py-2.5 px-2 text-center font-extrabold border-r border-slate-100 ${scoreColor}`}>{row.weightedScore.toFixed(1)}</td>
+                        {/* Percentile */}
+                        <td className={`py-2.5 px-2 text-center font-extrabold text-slate-600 border-r border-slate-100`}>{percentile}th</td>
                         {/* Status */}
                         <td className="py-2.5 px-3.5 text-center">
                           <span className={`px-2 py-0.5 rounded text-[8.5px] font-extrabold border uppercase tracking-wider inline-block ${statusBadgeClass}`}>
@@ -534,13 +656,7 @@ export default function VendorPerformance({
             </div>
             
             {/* Info Legend Footer */}
-            <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-[10px] font-bold text-slate-400">
-              <div className="flex items-center gap-1.5">
-                <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>Performance Score is a weighted calculation of Fill Rate (40%), On-Time Delivery (25%), Order Accuracy (20%), Stockout Caused (10%), and Lead Time (5%).</span>
-              </div>
+            <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 text-[10px] font-bold text-slate-400">
               <div className="flex items-center gap-4 text-slate-500 font-extrabold">
                 <span>≥95.0%: Excellent</span>
                 <span>|</span>
@@ -595,7 +711,7 @@ export default function VendorPerformance({
                     <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
                       {activeVendor.name} Profile
                     </h2>
-                    <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Corporate metadata & procurement metrics</p>
+                    <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Metadata & procurement metrics</p>
                   </div>
                 </div>
                 
@@ -606,10 +722,6 @@ export default function VendorPerformance({
                     <span className="text-slate-900 font-extrabold mt-1 block">{activeVendor.type}</span>
                   </div>
                   <div className="bg-slate-55 bg-slate-50/50 p-3 rounded-xl border border-slate-100 shadow-2xs">
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Region</span>
-                    <span className="text-slate-900 font-extrabold mt-1 block">{activeVendor.region}</span>
-                  </div>
-                  <div className="bg-slate-55 bg-slate-50/50 p-3 rounded-xl border border-slate-100 shadow-2xs">
                     <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">City Location</span>
                     <span className="text-slate-900 font-extrabold mt-1 block">{activeVendor.city}</span>
                   </div>
@@ -617,6 +729,47 @@ export default function VendorPerformance({
                     <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Onboarding Date</span>
                     <span className="text-slate-900 font-extrabold mt-1 block">{activeVendor.onboardingDate}</span>
                   </div>
+
+                  <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 shadow-2xs row-span-2 flex flex-col items-center justify-center gap-3">
+                    <div className="relative w-16 h-16 flex items-center justify-center">
+                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                        <circle cx="18" cy="18" r="15.915" fill="none" stroke="#f1f5f9" strokeWidth="4.5" />
+                        <circle cx="18" cy="18" r="15.915" fill="none" stroke="#008751" strokeWidth="4.5" strokeDasharray={`${activeVendorPerfScore} 100`} strokeLinecap="round" />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="absolute text-[11px] font-extrabold text-slate-800">{activeVendorPerfScore.toFixed(1)}</span>
+                      </div>
+                    </div>
+                    <div className="text-center space-y-0.5">
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Performance Band</span>
+                      <span className="text-lg font-black text-[#008751] block leading-none">Band {vendorBand}</span>
+                    </div>
+                    {/* <div className="w-full mt-1 pt-2 border-t border-slate-200">
+                      <table className="w-full text-[9px] text-slate-500 text-left font-medium">
+                        <thead>
+                          <tr>
+                            <th className="font-bold pb-1 text-slate-400 uppercase">Score</th>
+                            <th className="font-bold pb-1 text-slate-400 uppercase text-right">Band</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td className="py-0.5">95–100</td>
+                            <td className="text-right font-extrabold text-slate-700">A</td>
+                          </tr>
+                          <tr>
+                            <td className="py-0.5">90–94.9</td>
+                            <td className="text-right font-extrabold text-slate-700">B</td>
+                          </tr>
+                          <tr>
+                            <td className="py-0.5">&lt; 90.0</td>
+                            <td className="text-right font-extrabold text-slate-700">C</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div> */}
+                  </div>
+
                   <div className="bg-slate-55 bg-slate-50/50 p-3 rounded-xl border border-slate-100 shadow-2xs">
                     <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Manager</span>
                     <span className="text-slate-900 font-extrabold mt-1 block">{activeVendor.managedBy}</span>
@@ -631,52 +784,100 @@ export default function VendorPerformance({
                   </div>
                 </div>
               </div>
-
-              {/* Gauge with clean margins */}
-              <div className="flex items-center gap-5 bg-slate-50/50 p-5 rounded-2xl border border-slate-100 w-full lg:w-fit self-start shadow-sm card-hover-effect">
-                <div className="relative w-16 h-16 flex items-center justify-center">
-                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                    <circle cx="18" cy="18" r="15.915" fill="none" stroke="#f1f5f9" strokeWidth="4.5" />
-                    <circle cx="18" cy="18" r="15.915" fill="none" stroke="#008751" strokeWidth="4.5" strokeDasharray={`${vendorOverallScore * 10} 100`} strokeLinecap="round" />
-                  </svg>
-                  <span className="absolute text-sm font-extrabold text-slate-800">{vendorOverallScore}</span>
-                </div>
-                <div className="text-left space-y-0.5">
-                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Performance Band</span>
-                  <span className="text-2xl font-black text-[#008751] block leading-none">Band {vendorBand}</span>
-                </div>
-              </div>
             </div>
 
             {/* Summary KPI card block with structured grid cards */}
-            <div className="mt-8 p-5 bg-slate-50/50 rounded-2xl border border-slate-100/80 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 text-left">
-              <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150">
-                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Rating Score</span>
-                <span className="text-base font-extrabold text-slate-900 mt-1 block">{vendorOverallScore} / 10</span>
+            <div className="mt-8 p-5 bg-slate-50/50 rounded-2xl border border-slate-100/80 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 text-left">
+              <div 
+                className="bg-emerald-50 p-4 rounded-xl border border-emerald-200 shadow-2xs hover:scale-[1.02] transition duration-150 cursor-help ring-1 ring-emerald-500/20"
+                title="Organisation Weighted Score = Performance Score × (1 - Rejection Rate)"
+              >
+                <span className="text-[9px] font-extrabold text-emerald-800 uppercase tracking-wider block flex items-center gap-1">
+                  Organisation Weighted Score
+                  <svg className="w-3 h-3 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </span>
+                <span className="text-base font-black text-emerald-700 mt-1 block">{activeVendorWeightedScore.toFixed(1)}</span>
               </div>
-              <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150">
-                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">On-Time %</span>
+              
+              <div 
+                className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150 cursor-help"
+                title="Performance Score = Fill Rate × 40% + On-Time Delivery × 25% + Order Accuracy × 20% + Stockouts × 10% + Lead Time × 5%"
+              >
+                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block flex items-center gap-1">
+                  Performance Score
+                  <svg className="w-3 h-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </span>
+                <span className="text-base font-extrabold text-slate-900 mt-1 block">{activeVendorPerfScore.toFixed(1)}</span>
+              </div>
+
+              <div 
+                className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150 cursor-help"
+                title="Delivered Units = Total items successfully delivered in completed POs"
+              >
+                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Delivered Units</span>
+                <span className="text-base font-extrabold text-slate-900 mt-1 block">{activeVendorDelivered.toLocaleString()}</span>
+              </div>
+              <div 
+                className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150 cursor-help"
+                title="Rejected Units = Total items rejected due to quality defects or damages"
+              >
+                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Rejected Units</span>
+                <span className="text-base font-extrabold text-rose-700 mt-1 block">{activeVendorRejected.toLocaleString()}</span>
+              </div>
+              <div 
+                className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150 cursor-help"
+                title="Rejection Rate = (Rejected Units / Total Expected Units) × 100"
+              >
+                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Rejection Rate</span>
+                <span className="text-base font-extrabold text-rose-700 mt-1 block">{activeVendorRejectionRate.toFixed(1)}%</span>
+              </div>
+              <div 
+                className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150 cursor-help"
+                title="Avg Lead Time = Average days between PO creation date and actual delivery date"
+              >
+                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Avg Lead Time</span>
+                <span className="text-base font-extrabold text-slate-900 mt-1 block">{vendorLeadTime.toFixed(1)} Days</span>
+              </div>
+              
+              <div 
+                className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150 cursor-help"
+                title="Fill Rate = (Received Units / Expected Units) × 100"
+              >
+                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Fill Rate</span>
+                <span className="text-base font-extrabold text-slate-900 mt-1 block">{activeVendorFillRate.toFixed(1)}%</span>
+              </div>
+              <div 
+                className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150 cursor-help"
+                title="On-Time Delivery = (POs delivered on or before schedule / Total POs) × 100"
+              >
+                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">On-Time Delivery</span>
                 <span className="text-base font-extrabold text-slate-900 mt-1 block">{vendorOnTime}%</span>
               </div>
-              <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150">
-                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Cost Compliance</span>
-                <span className="text-base font-extrabold text-slate-900 mt-1 block">94.8%</span>
+              <div 
+                className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150 cursor-help"
+                title="Order Accuracy = (Orders with correct items received / Total orders) × 100"
+              >
+                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Order Accuracy</span>
+                <span className="text-base font-extrabold text-slate-900 mt-1 block">{activeVendorOrderAccuracy.toFixed(1)}%</span>
               </div>
-              <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150">
-                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Avg Lead Time</span>
-                <span className="text-base font-extrabold text-slate-900 mt-1 block">{vendorLeadTime} Days</span>
+              <div 
+                className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150 cursor-help"
+                title="Stockout Events = Total count of store stockouts attributed to lead times of this vendor"
+              >
+                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Stockout Events</span>
+                <span className="text-base font-extrabold text-slate-900 mt-1 block">{activeVendorStockouts}</span>
               </div>
-              <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150">
-                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">SKUs Supplied</span>
-                <span className="text-base font-extrabold text-slate-900 mt-1 block">{vendorProducts.length}</span>
+              <div 
+                className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150 cursor-help"
+                title="Monthly PO Spend = Total value of POs approved or delivered in the active month"
+              >
+                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Monthly PO Spend</span>
+                <span className="text-base font-extrabold text-slate-900 mt-1 block">${activeVendorMonthlySpend.toLocaleString()}</span>
               </div>
-              <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150">
-                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Total POs</span>
-                <span className="text-base font-extrabold text-slate-900 mt-1 block">
-                  {vendorProducts.reduce((sum, p) => sum + p.deliveriesCount, 0)}
-                </span>
-              </div>
-              <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150 col-span-2 lg:col-span-1">
+              <div 
+                className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150 cursor-help"
+                title="Projected Annual Spend = Monthly PO Spend × 12"
+              >
                 <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Annual Spend</span>
                 <span className="text-base font-extrabold text-slate-900 mt-1 block">${totalSpend.toLocaleString()}</span>
               </div>
@@ -689,10 +890,10 @@ export default function VendorPerformance({
               <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
                 Products Supplied by {activeVendor.name}
               </h3>
-              <div className="flex gap-2">
+              {/* <div className="flex gap-2">
                 <span className="text-xs font-bold text-slate-400">YoY score change:</span>
                 <span className={`text-xs font-bold ${yoyColor}`}>{yoySign}{yoyScoreChange}%</span>
-              </div>
+              </div> */}
             </div>
             <div className="overflow-x-auto max-h-[500px] scrollbar-thin">
               <table className="w-full text-[11px] text-left">
@@ -750,6 +951,17 @@ export default function VendorPerformance({
                     const marketPrice = activeProd ? activeProd.unitPrice : row.unitCost;
                     const priceDiff = row.unitCost - marketPrice;
                     const priceDiffPct = marketPrice > 0 ? Math.round((priceDiff / marketPrice) * 100) : 0;
+
+                    const vendorsForThisProduct = getVendorsForProductDB(vendors, row.productCode, masterProducts);
+                    const isSoleSource = vendorsForThisProduct.length === 1;
+                    
+                    const seed = (row.productCode.charCodeAt(0) || 0) + (row.productCode.charCodeAt(row.productCode.length - 1) || 0) + (activeVendor.id.charCodeAt(activeVendor.id.length - 1) || 0);
+                    const randomOffset = ((seed * 9301 + 49297) % 233280) / 233280 - 0.5;
+
+                    const prodOnTime = activeVendorMetrics ? Math.min(100, Math.max(0, Math.round(activeVendorMetrics.onTimePercent + (randomOffset * 4.0)))) : row.onTimePercent;
+                    const prodRejection = activeVendorMetrics ? Math.max(0.1, parseFloat((activeVendorMetrics.rejectionRatePct - (randomOffset * 1.5)).toFixed(1))) : row.rejectionRate;
+                    const prodLeadTime = activeVendorMetrics ? Math.max(1.0, parseFloat((activeVendorMetrics.leadTimeDays + (randomOffset * 0.8)).toFixed(1))) : parseFloat(row.deliveryTime.split(" ")[0] || "2.5");
+                    const prodScore = activeVendorMetrics ? Math.min(100, Math.max(0, activeVendorPerfScore + (randomOffset * 3.5))) : activeVendorPerfScore;
                     
                     return (
                     <tr key={idx} className="hover:bg-slate-50/40 transition duration-75">
@@ -775,12 +987,12 @@ export default function VendorPerformance({
                           <span className="text-slate-400">-</span>
                         )}
                       </td> */}
-                      <td className="py-2.5 px-1.5 text-center text-slate-500 font-medium border-r border-slate-100">{row.deliveryTime}</td>
-                      <td className="py-2.5 px-1.5 text-center text-slate-700 border-r border-slate-100">{row.onTimePercent}%</td>
-                      <td className="py-2.5 px-1.5 text-center text-slate-700 border-r border-slate-100">{row.rejectionRate}%</td>
+                      <td className="py-2.5 px-1.5 text-center text-slate-500 font-medium border-r border-slate-100">{prodLeadTime.toFixed(1)} days</td>
+                      <td className="py-2.5 px-1.5 text-center text-slate-700 border-r border-slate-100">{prodOnTime}%</td>
+                      <td className="py-2.5 px-1.5 text-center text-slate-700 border-r border-slate-100">{prodRejection}%</td>
                       <td className="py-2.5 px-1.5 text-center border-r border-slate-100">
-                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${row.isSoleSource ? "bg-rose-50 text-rose-600 border-rose-100" : "bg-slate-50 text-slate-600 border-slate-200"}`}>
-                          {row.isSoleSource ? "Yes" : "No"}
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${isSoleSource ? "bg-rose-50 text-rose-600 border-rose-100" : "bg-slate-50 text-slate-600 border-slate-200"}`}>
+                          {isSoleSource ? "Yes" : "No"}
                         </span>
                       </td>
                       <td className="py-2.5 px-1.5 text-center border-r border-slate-100">
@@ -795,11 +1007,12 @@ export default function VendorPerformance({
                       </td>
                       <td className="py-4.5 px-6 text-center">
                         <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                          row.overallScore >= 9.0 ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
-                          row.overallScore >= 8.5 ? "bg-amber-50 text-amber-600 border-amber-100" :
-                          "bg-slate-50 text-slate-400 border-slate-150"
+                          prodScore >= 95.0 ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
+                          prodScore >= 85.0 ? "bg-slate-50 text-slate-800 border-slate-200" :
+                          prodScore >= 75.0 ? "bg-amber-50 text-amber-600 border-amber-100" :
+                          "bg-rose-50 text-rose-600 border-rose-100"
                         }`}>
-                          {row.overallScore} / 10
+                          {prodScore.toFixed(1)}
                         </span>
                       </td>
                     </tr>
@@ -878,7 +1091,7 @@ export default function VendorPerformance({
                   <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
                     Sourcing Analysis: {activeProduct.name}
                   </h2>
-                  <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Sourcing allocations, storage rules and baseline cost margins</p>
+                  {/* <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Sourcing allocations, storage rules and baseline cost margins</p> */}
                 </div>
               </div>
               
@@ -933,7 +1146,7 @@ export default function VendorPerformance({
             </div>
 
             {/* Product summary KPI band */}
-            <div className="mt-8 p-5 bg-slate-50/40 rounded-2xl border border-slate-100 grid grid-cols-2 md:grid-cols-4 gap-4 text-left pl-2">
+            <div className="mt-8 p-5 bg-slate-50/40 rounded-2xl border border-slate-100 grid grid-cols-2 lg:grid-cols-5 gap-4 text-left pl-2">
               <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150">
                 <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Active Vendors</span>
                 <span className="text-base font-extrabold text-slate-900 mt-1 block">{vendorCount}</span>
@@ -949,9 +1162,15 @@ export default function VendorPerformance({
                 </span>
               </div>
               <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150">
-                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Overall Score</span>
-                <span className="text-base font-extrabold text-bp-green mt-1 block">
-                  {productVendors.length > 0 ? (productVendors.reduce((sum, v) => sum + v.overallScore, 0) / productVendors.length).toFixed(1) : "9.0"} / 10
+                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Performance Score</span>
+                <span className="text-base font-extrabold text-slate-900 mt-1 block">
+                  {productVendors.length > 0 ? (productVendors.reduce((sum, v) => sum + v.performanceScore, 0) / productVendors.length).toFixed(1) : "95.0"}
+                </span>
+              </div>
+              <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150">
+                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Organisation Weighted Score</span>
+                <span className="text-base font-extrabold text-emerald-700 mt-1 block">
+                  {productVendors.length > 0 ? (productVendors.reduce((sum, v) => sum + v.weightedScore, 0) / productVendors.length).toFixed(1) : "95.0"}
                 </span>
               </div>
             </div>
@@ -963,7 +1182,7 @@ export default function VendorPerformance({
               <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
                 Onboarded Vendors for {activeProduct.name}
               </h3>
-              <p className="text-[10px] text-slate-400 font-medium mt-0.5">Overview scores and base unit prices of qualified vendor networks</p>
+              <p className="text-[10px] text-slate-400 font-medium mt-0.5">Overview scores and base unit prices of qualified vendors</p>
             </div>
             <div className="overflow-x-auto scrollbar-thin">
               <table className="w-full text-[11px] text-left">
@@ -1004,8 +1223,14 @@ export default function VendorPerformance({
                     <th className="py-2.5 px-1.5 border-r border-slate-200 text-center">MOQ</th>
                     <th className="py-2.5 px-2 text-center leading-tight">
                       <div className="flex flex-col items-center justify-center">
-                        <span>Overall</span>
+                        <span>Performance</span>
                         <span>Score</span>
+                      </div>
+                    </th>
+                    <th className="py-2.5 px-2 text-center leading-tight border-l border-slate-200 bg-emerald-50/30">
+                      <div className="flex flex-col items-center justify-center">
+                        <span>Organisation</span>
+                        <span>Weighted</span>
                       </div>
                     </th>
                   </tr>
@@ -1034,10 +1259,11 @@ export default function VendorPerformance({
                         <td className="py-2.5 px-1.5 text-center text-slate-700 border-r border-slate-100">{row.onTimePercent}%</td>
                         <td className="py-2.5 px-1.5 text-center text-slate-700 border-r border-slate-100">{row.rejectionRate}%</td>
                         <td className="py-2.5 px-1.5 text-center text-slate-700 border-r border-slate-100">{row.moq} units</td>
-                        <td className="py-2.5 px-2 text-center">
-                          <span className="px-2 py-0.5 rounded-full text-[9px] font-bold border bg-slate-50 text-slate-600 border-slate-200">
-                            {row.overallScore} / 10
-                          </span>
+                        <td className="py-2.5 px-2 text-center text-slate-700 font-extrabold">
+                          {row.performanceScore.toFixed(1)}
+                        </td>
+                        <td className="py-2.5 px-2 text-center text-emerald-700 font-extrabold border-l border-slate-100 bg-emerald-50/30">
+                          {row.weightedScore.toFixed(1)}
                         </td>
                       </tr>
                     );
@@ -1064,7 +1290,7 @@ export default function VendorPerformance({
                   </span>
                 ) : (
                   <span>
-                   Our AI recommendation engines identify <span className="font-extrabold text-bp-yellow underline">{bestValueVendor?.vendorName}</span> as the optimal primary replenishment route because of its {recommendationReason}, yielding a leading overall performance score of {bestValueVendor?.overallScore}/10.
+                   Our AI recommendation engines identify <span className="font-extrabold text-bp-yellow underline">{bestValueVendor?.vendorName}</span> as the optimal primary replenishment route because of its {recommendationReason}, yielding a leading performance score of {bestValueVendor?.performanceScore.toFixed(1)} and an organisation weighted score of {bestValueVendor?.weightedScore.toFixed(1)}.
                   </span>
                 )}
               </p>

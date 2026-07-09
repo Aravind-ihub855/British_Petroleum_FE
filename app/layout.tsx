@@ -3,6 +3,7 @@ import { Poppins, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "../context/AuthContext";
 import { DataProvider } from "../context/DataContext";
+import GlobalTooltip from "../components/GlobalTooltip";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -34,6 +35,7 @@ export default function RootLayout({
         <AuthProvider>
           <DataProvider>
             {children}
+            <GlobalTooltip />
           </DataProvider>
         </AuthProvider>
       </body>

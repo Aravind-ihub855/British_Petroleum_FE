@@ -68,9 +68,9 @@ export default function ProductDashboard({ onNavigate }: ProductDashboardProps) 
           <h2 className="text-sm font-extrabold text-slate-900 tracking-tight">
             Item / Product Analysis
           </h2>
-          <p className="text-[10px] text-slate-400 font-semibold mt-0.5 leading-snug">
+          {/* <p className="text-[10px] text-slate-400 font-semibold mt-0.5 leading-snug">
             Select a product category to review outlet allocations.
-          </p>
+          </p> */}
         </div>
         <div className="flex items-center gap-2.5">
           <span className="text-xs font-bold text-slate-500">Select Product</span>
@@ -123,7 +123,7 @@ export default function ProductDashboard({ onNavigate }: ProductDashboardProps) 
             <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
               Store-wise Stockout Prediction - {activeProduct.name}
             </h3>
-            <p className="text-[10px] text-slate-400 font-medium mt-0.5">Location inventory levels and direct sourcing shortcut options</p>
+            <p className="text-[10px] text-slate-400 font-medium mt-0.5">Location inventory levels</p>
           </div>
           {/* <button
             onClick={() => onNavigate("3", "product_wise", undefined, activeProduct.code)}

@@ -98,13 +98,16 @@ export interface PurchaseOrder {
   id: string;
   vendorId: string;
   vendorName: string;
-  status: "Pending Approval" | "Approved" | "In Transit" | "Delivered" | "Delayed" | "Cancelled";
+  storeId?: string;
+  status: "Pending Approval" | "Pending Review" | "Returned" | "Approved" | "In Transit" | "Delivered" | "Delayed" | "Cancelled";
   amount: number;
   expectedDeliveryDate: string;
   actualDeliveryDate?: string;
   orderDate: string;
   expectedItems: number;
   receivedItems: number;
+  items?: any[];
+  leadTimeDays?: number;
 }
 
 export interface PurchaseRequest {
@@ -126,6 +129,7 @@ export interface VendorIssue {
   dateReported: string;
   status: "Open" | "In Progress" | "Resolved";
   assignedTo: string;
+  relatedPO?: string;
 }
 
 export interface ProcurementActivity {
@@ -138,8 +142,10 @@ export interface ProcurementActivity {
 
 export interface AIRecommendation {
   id: string;
-  recommendation: string;
-  reason: string;
+  recommendation?: string;
+  reason?: string;
+  type?: string;
+  description?: string;
   priority: "High" | "Medium" | "Low";
   actionLabel: string;
 }

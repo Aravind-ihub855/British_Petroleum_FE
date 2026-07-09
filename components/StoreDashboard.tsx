@@ -191,9 +191,9 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
             <h2 className="text-sm font-bold text-slate-800">
               Store-Level Predictions
             </h2>
-            <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+            {/* <p className="text-[11px] text-slate-400 font-medium mt-0.5">
               Select a store outlet and target date to view predictions.
-            </p>
+            </p> */}
           </div>
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-2">
@@ -474,12 +474,12 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
                           return `${parts[0]} ${mName} ${parts[2]}`;
                         })()}
                       </div>
-                      <div className="text-[9px] text-slate-400 font-medium mt-0.5 animate-none whitespace-nowrap">
-                        ({daysLeft} {daysLeft === 1 ? "day" : "days"} left)
-                      </div>
                     </td>
                     <td className="py-2.5 px-2 text-center border-r border-slate-100">
-                      <span className="font-extrabold text-sm text-slate-800">{daysLeft}</span>
+                      <div className="font-extrabold text-sm text-slate-800">{daysLeft}</div>
+                      <div className="text-[9px] text-slate-400 font-medium mt-0.5 animate-none whitespace-nowrap">
+                        {daysLeft === 1 || daysLeft === 0 ? "day" : "days"} left
+                      </div>
                     </td>
                     <td className="py-2.5 px-2 text-center font-bold text-slate-800 border-r border-slate-100">{row.recommendedRoq}</td>
                     <td className="py-2.5 px-2 text-center text-slate-500 font-medium border-r border-slate-100">
@@ -544,7 +544,7 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 text-slate-455">
             <div className="text-slate-400">
-              <span className="font-extrabold text-slate-500">PR:</span> Purchase Required | <span className="font-extrabold text-slate-500">MR:</span> Monitor &amp; Reorder
+              <span className="font-extrabold text-slate-500">PR:</span> Purchase Required | <span className="font-extrabold text-slate-500">MR:</span> Material Required | <span className="font-extrabold text-slate-500">Monitor:</span> Monitor &amp; Reorder
             </div>
             <div className="h-3.5 w-px bg-slate-200 hidden sm:block" />
             <div className="text-slate-600 bg-slate-100 px-2 py-0.5 rounded font-extrabold">
