@@ -116,10 +116,67 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
   // 1. EXECUTIVE KPI CARDS — all derived from PO metrics above
   // ============================================================
 
-  // KPI 1 — Vendors Needing Attention (aligned with Performance Overview status tiers)
-  const criticalVendorsCount = allVendorMetrics.filter(v => v.metrics.status === "Critical").length;
-  const warningVendorsCount = allVendorMetrics.filter(v => v.metrics.status === "Needs Improvement").length;
-  const vendorsNeedingAttention = criticalVendorsCount + warningVendorsCount;
+  // KPI 1 — Vendors Needing Attention (aligned with the Vendor Action Center)
+  const openVendorIssues = Array.from(new Map(purchaseOrders.filter(po => po.status === "Delayed").map(po => [po.vendorId, po])).entries())
+    .map(([vendorId, po]) => {
+      const store = stores.find(s => s.id === po.storeId);
+      const expectedMs = new Date(po.expectedDeliveryDate).getTime();
+      const todayMs = new Date(todayStr).getTime();
+      const daysLate = Math.max(1, Math.ceil((todayMs - expectedMs) / (1000 * 60 * 60 * 24)));
+      const vm = allVendorMetrics.find(v => v.vendor.id === vendorId);
+      let issueType = "Delivery delayed";
+      let recAction = "Follow up with vendor";
+      let priority = "Medium";
+      let daysDelayedVal = `${daysLate} Day${daysLate !== 1 ? "s" : ""}`;
+      
+      const rejectionRate = vm?.metrics.rejectionRatePct ?? 0;
+      const fillRate = vm?.metrics.fillRateVal ?? 100;
+
+      if (rejectionRate >= 5.0) {
+        issueType = "Excessive Quality Rejection";
+        recAction = "Initiate quality audit & hold pending invoices";
+        priority = "High";
+        daysDelayedVal = "N/A";
+      } else if (fillRate < 90.0) {
+        issueType = "SLA Fill Rate Breach";
+        recAction = "Request short-shipment credit note & explanation";
+        priority = "High";
+        daysDelayedVal = "N/A";
+      } else if (daysLate >= 5) {
+        issueType = "Critical delivery delay";
+        recAction = "Escalate to logistics lead & check backup sourcing";
+        priority = "High";
+      } else if (daysLate === 4) {
+        issueType = "Shipment delayed";
+        recAction = "Request immediate ETA update & courier details";
+        priority = "Medium";
+      } else if (daysLate === 3) {
+        issueType = "Invoice/Manifest Mismatch";
+        recAction = "Request corrected billing manifest from supplier";
+        priority = "Medium";
+        daysDelayedVal = "N/A";
+      } else {
+        issueType = "Slight delivery delay";
+        recAction = "Monitor carrier tracking status";
+        priority = "Low";
+      }
+
+      return {
+        vendorId,
+        vendorName: po.vendorName,
+        issueType,
+        affectedStore: store?.name || "Store 1",
+        daysDelayed: daysDelayedVal,
+        priority,
+        status: "Open",
+        recAction,
+        performanceScore: vm?.metrics.performanceScore ?? 100
+      };
+    })
+    .sort((a, b) => a.performanceScore - b.performanceScore)
+    .slice(0, 5);
+
+  const vendorsNeedingAttention = openVendorIssues.length;
 
   // KPI 2 — Purchase Orders Awaiting Action
   const posAwaitingAction = purchaseOrders.filter(po =>
@@ -176,36 +233,6 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
   // 2. VENDOR ACTION CENTER — sourced from actual Delayed POs
   // Shows the worst-performing vendors with delayed shipments
   // ============================================================
-  const delayedPOsByVendor = new Map<string, any>();
-  purchaseOrders
-    .filter(po => po.status === "Delayed")
-    .forEach(po => {
-      if (!delayedPOsByVendor.has(po.vendorId)) {
-        delayedPOsByVendor.set(po.vendorId, po);
-      }
-    });
-
-  const openVendorIssues = Array.from(delayedPOsByVendor.entries())
-    .map(([vendorId, po]) => {
-      const store = stores.find(s => s.id === po.storeId);
-      const expectedMs = new Date(po.expectedDeliveryDate).getTime();
-      const todayMs = new Date(todayStr).getTime();
-      const daysLate = Math.max(1, Math.ceil((todayMs - expectedMs) / (1000 * 60 * 60 * 24)));
-      const vm = allVendorMetrics.find(v => v.vendor.id === vendorId);
-      return {
-        vendorId,
-        vendorName: po.vendorName,
-        issueType: "Delivery delayed",
-        affectedStore: store?.name || "Store 1",
-        daysDelayed: `${daysLate} Day${daysLate !== 1 ? "s" : ""}`,
-        priority: "High",
-        status: "Open",
-        recAction: "Follow up with vendor",
-        performanceScore: vm?.metrics.performanceScore ?? 100
-      };
-    })
-    .sort((a, b) => a.performanceScore - b.performanceScore) // worst performers first
-    .slice(0, 5);
 
   // 3. VENDOR PERFORMANCE TABLE (top 5 by score — same metrics as Performance Overview)
   const vendorPerformanceData = allVendorMetrics.map(({ vendor, metrics }) => ({
@@ -235,19 +262,28 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
     return { ...s, len, offset, percent: Math.round((s.count / totalPOs) * 100) };
   });
 
-  // 5. VENDOR DELAY IMPACT (Number of Affected Products)
-  const vendorDelayCounts = new Map<string, number>();
-  purchaseOrders.filter(po => po.status === "Delayed").forEach(po => {
-    const uniqueItemsCount = po.items ? po.items.length : 1;
-    vendorDelayCounts.set(po.vendorName, (vendorDelayCounts.get(po.vendorName) || 0) + uniqueItemsCount);
-  });
-  
-  const vendorDelays = Array.from(vendorDelayCounts.entries())
-    .map(([vendor, count]) => ({ vendor, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
+  // 5. VENDOR DELAY IMPACT BY CITY (Number of Affected Products grouped by Chicago and Denver)
+  const delayImpactByCity = ["Chicago", "Denver"].map(city => {
+    const counts = new Map<string, number>();
+    purchaseOrders
+      .filter(po => {
+        if (po.status !== "Delayed") return false;
+        const store = stores.find(s => s.id === po.storeId);
+        return store && store.city.toLowerCase() === city.toLowerCase();
+      })
+      .forEach(po => {
+        const uniqueItemsCount = po.items ? po.items.length : 1;
+        counts.set(po.vendorName, (counts.get(po.vendorName) || 0) + uniqueItemsCount);
+      });
 
-  const maxDelayCount = vendorDelays.length > 0 ? Math.max(...vendorDelays.map(d => d.count)) : 10;
+    const delaysList = Array.from(counts.entries())
+      .map(([vendor, count]) => ({ vendor, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    const maxCount = delaysList.length > 0 ? Math.max(...delaysList.map(d => d.count)) : 10;
+    return { city, delaysList, maxCount };
+  });
 
   // 6. AI PROCUREMENT RECOMMENDATIONS (Carousel mapping)
   const aiRecommendations: any[] = [];
@@ -344,10 +380,37 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
     <div className="space-y-8 animate-fadeIn pb-20">
       
       {/* 1. EXECUTIVE KPI 6-CARD GRID ROW */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+        {/* Card 5: Critical Vendor Issues */}
+        <div 
+          onClick={() => {
+            const el = document.getElementById("vendor-action-center");
+            if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+          }} 
+          className="cursor-pointer bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex items-center gap-4 hover:shadow-md transition duration-150 text-left card-hover-effect"
+          title="Vendors Attention: Count of active vendors with outstanding PO delays requiring immediate action"
+        >
+          <div className="w-11 h-11 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center flex-shrink-0">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div className="space-y-0.5 min-w-0">
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block truncate">Critical Issues</span>
+            <span className="text-xl font-extrabold text-slate-900 block leading-tight">{vendorsNeedingAttention}</span>            <span className="text-[9px] text-slate-400 block font-semibold leading-none truncate">Requires Immediate Action</span>
+          </div>
+        </div>
         
         {/* Card 1: Vendors Needing Attention */}
-        <div onClick={() => onNavigate("3", "overview")} className="cursor-pointer bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex items-center gap-4 hover:shadow-md transition duration-150 text-left card-hover-effect">
+        {/* <div 
+          onClick={() => {
+            const el = document.getElementById("vendor-action-center");
+            if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+          }} 
+          className="cursor-pointer bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex items-center gap-4 hover:shadow-md transition duration-150 text-left card-hover-effect"
+          title="Vendors Attention: Count of active vendors with outstanding PO delays requiring immediate action"
+        >
           <div className="w-11 h-11 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -356,26 +419,18 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
           <div className="space-y-0.5 min-w-0">
             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block truncate">Vendors Attention</span>
             <span className="text-xl font-extrabold text-slate-900 block leading-tight">{vendorsNeedingAttention}</span>
-            <span className="text-[9px] text-slate-400 block font-semibold leading-none truncate">{criticalVendorsCount} Critical, {warningVendorsCount} Warning</span>
+            <span className="text-[9px] text-slate-400 block font-semibold leading-none truncate">{vendorsNeedingAttention} Delayed PO Issues</span>
           </div>
-        </div>
+        </div> */}
 
-        {/* Card 2: Purchase Orders Awaiting Action */}
-        <div onClick={() => onNavigate("1", "pos_awaiting")} className="cursor-pointer bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex items-center gap-4 hover:shadow-md transition duration-150 text-left card-hover-effect">
-          <div className="w-11 h-11 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-            </svg>
-          </div>
-          <div className="space-y-0.5 min-w-0">
-            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block truncate">PO Awaiting Action</span>
-            <span className="text-xl font-extrabold text-slate-900 block leading-tight">{posAwaitingAction}</span>
-            <span className="text-[9px] text-slate-400 block font-semibold leading-none truncate">Pending Approval & Review</span>
-          </div>
-        </div>
+
 
         {/* Card 3: Delayed Deliveries */}
-        <div onClick={() => onNavigate("3", "overview")} className="cursor-pointer bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex items-center gap-4 hover:shadow-md transition duration-150 text-left card-hover-effect">
+        <div 
+          onClick={() => onNavigate("3", "overview")} 
+          className="cursor-pointer bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex items-center gap-4 hover:shadow-md transition duration-150 text-left card-hover-effect"
+          title="Delayed Deliveries: Active Purchase Orders where delivery date is past expected schedule"
+        >
           <div className="w-11 h-11 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center flex-shrink-0">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -388,8 +443,30 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
           </div>
         </div>
 
+                {/* Card 2: Purchase Orders Awaiting Action */}
+        <div 
+          onClick={() => onNavigate("1", "pos_awaiting")} 
+          className="cursor-pointer bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex items-center gap-4 hover:shadow-md transition duration-150 text-left card-hover-effect"
+          title="PO Awaiting Action: Total Purchase Orders pending Manager's Approval or Review"
+        >
+          <div className="w-11 h-11 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+            </svg>
+          </div>
+          <div className="space-y-0.5 min-w-0">
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block truncate">PO Awaiting Action</span>
+            <span className="text-xl font-extrabold text-slate-900 block leading-tight">{posAwaitingAction}</span>
+            <span className="text-[9px] text-slate-400 block font-semibold leading-none truncate">Pending Approval & Review</span>
+          </div>
+        </div>
+
         {/* Card 4: Products Supply Risk */}
-        <div onClick={() => onNavigate("2", "store")} className="cursor-pointer bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex items-center gap-4 hover:shadow-md transition duration-150 text-left card-hover-effect">
+        {/* <div 
+          onClick={() => onNavigate("2", "store")} 
+          className="cursor-pointer bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex items-center gap-4 hover:shadow-md transition duration-150 text-left card-hover-effect"
+          title="Products Supply Risk: SKUs with projected stockout days remaining <= 15 days across stores"
+        >
           <div className="w-11 h-11 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
@@ -400,24 +477,16 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
             <span className="text-xl font-extrabold text-slate-900 block leading-tight">{supplyRiskProductsCount}</span>
             <span className="text-[9px] text-slate-400 block font-semibold leading-none truncate">Across Assigned Stores</span>
           </div>
-        </div>
+        </div> */}
 
-        {/* Card 5: Critical Vendor Issues */}
-        <div onClick={() => onNavigate("3", "overview")} className="cursor-pointer bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex items-center gap-4 hover:shadow-md transition duration-150 text-left card-hover-effect">
-          <div className="w-11 h-11 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center flex-shrink-0">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <div className="space-y-0.5 min-w-0">
-            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block truncate">Critical Issues</span>
-            <span className="text-xl font-extrabold text-slate-900 block leading-tight">{criticalVendorIssues}</span>
-            <span className="text-[9px] text-slate-400 block font-semibold leading-none truncate">Requires Immediate Action</span>
-          </div>
-        </div>
+
 
         {/* Card 6: Deliveries Due Today */}
-        <div onClick={() => onNavigate("3", "overview")} className="cursor-pointer bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex items-center gap-4 hover:shadow-md transition duration-150 text-left card-hover-effect">
+        <div 
+          onClick={() => onNavigate("3", "overview")} 
+          className="cursor-pointer bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex items-center gap-4 hover:shadow-md transition duration-150 text-left card-hover-effect"
+          title="Deliveries Due Today: POs scheduled for delivery today (status: Approved or In Transit)"
+        >
           <div className="w-11 h-11 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -433,17 +502,17 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
       </div>
 
       {/* 2. VENDOR ACTION CENTER */}
-      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden text-left card-hover-effect">
+      <div id="vendor-action-center" className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden text-left card-hover-effect">
         <div className="px-6 py-5 border-b border-slate-50 flex justify-between items-center flex-wrap gap-2">
           <div>
-            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Vendor Action Center <span className="text-[10px] text-slate-400 font-semibold lowercase tracking-normal">(Top Issues Requiring Your Attention)</span></h3>
-            <p className="text-[10px] text-slate-400 font-medium mt-0.5">Critical compliance actions and updates</p>
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Vendor Action Center <span className="text-[10px] text-slate-400 font-semibold lowercase tracking-normal"></span></h3>
+            {/* <p className="text-[10px] text-slate-400 font-medium mt-0.5">Critical compliance actions and updates</p> */}
           </div>
-          {openVendorIssues.length > 0 && (
+          {/* {openVendorIssues.length > 0 && (
             <span className="px-2.5 py-0.5 bg-rose-50 text-rose-600 text-[10px] font-extrabold rounded-full border border-rose-100 uppercase tracking-wider">
               {openVendorIssues.length} Actions Required
             </span>
-          )}
+          )} */}
         </div>
         <div className="overflow-x-auto scrollbar-thin">
           <table className="w-full text-xs text-left">
@@ -455,15 +524,15 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
                 <th className="px-6 py-4 text-center">Priority</th>
                 <th className="px-6 py-4 text-center">Days Delayed</th>
                 <th className="px-6 py-4">Recommended Action</th>
-                <th className="px-6 py-4 text-center">Status</th>
-                <th className="px-6 py-4 text-right">Action</th>
+                {/* <th className="px-6 py-4 text-center">Status</th>
+                <th className="px-6 py-4 text-right">Action</th> */}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100/60 font-semibold text-slate-700">
               {openVendorIssues.map((issue, idx) => {
                 const priorityColor = getStatusBadgeStyle(issue.priority);
                 const statusColor = getStatusBadgeStyle(issue.status === "Open" ? "Open" : "In Progress");
-                const daysColor = issue.daysDelayed !== "-" ? "text-rose-600 font-bold" : "text-slate-400 font-semibold";
+                const daysColor = issue.daysDelayed !== "N/A" ? "text-rose-600 font-bold" : "text-slate-400 font-semibold";
                 
                 return (
                   <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
@@ -484,7 +553,7 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
                     </td>
                     <td className={`px-6 py-4 text-center ${daysColor}`}>{issue.daysDelayed}</td>
                     <td className="px-6 py-4 text-slate-500 font-medium">{issue.recAction}</td>
-                    <td className="px-6 py-4 text-center">
+                    {/* <td className="px-6 py-4 text-center">
                       <span className={`px-2.5 py-0.5 rounded text-[8.5px] font-extrabold uppercase border ${statusColor}`}>
                         {issue.status === "Open" ? "Open" : "In Progress"}
                       </span>
@@ -496,7 +565,7 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                         </svg>
                       </button>
-                    </td>
+                    </td> */}
                   </tr>
                 );
               })}
@@ -510,60 +579,52 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
         </div>
       </div>
 
-      {/* 3. ROW 2: VENDOR PERFORMANCE & PO STATUS */}
+      {/* 3. ROW 2: VENDOR DELAY IMPACT BY CITY & PO STATUS */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-left">
         
-        {/* Vendor Performance */}
-        <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden card-hover-effect">
-          <div className="px-6 py-5 border-b border-slate-50 flex justify-between items-center">
-            <div>
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Vendor Performance <span className="text-[10px] text-slate-400 font-semibold lowercase tracking-normal">(Current Month)</span></h3>
-              <p className="text-[10px] text-slate-400 font-medium mt-0.5">Delivery timelines and fulfillment rates</p>
+        {/* Vendor Delay Impact by City */}
+        <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm p-6 flex flex-col justify-between card-hover-effect">
+          <div>
+            <div className="border-b border-slate-50 pb-3.5 mb-5 flex justify-between items-center">
+              <div>
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Vendor Delay Impact by City</h3>
+                <p className="text-[10px] text-slate-400 font-medium mt-0.5">Number of affected products by delayed shipment per city outlet</p>
+              </div>
             </div>
-            <button onClick={() => onNavigate("3", "overview")} className="text-[10.5px] font-extrabold text-emerald-600 hover:underline">View All</button>
-          </div>
-          <div className="overflow-x-auto scrollbar-thin">
-            <table className="w-full text-xs text-left">
-              <thead className="text-[10px] text-slate-400 uppercase tracking-wider font-extrabold bg-slate-50/50 border-b border-slate-50">
-                <tr>
-                  <th className="px-6 py-4">Vendor</th>
-                  <th className="px-6 py-4 text-center">On-Time Delivery</th>
-                  <th className="px-6 py-4 text-center">Fill Rate</th>
-                  <th className="px-6 py-4 text-center">Open POs</th>
-                  <th className="px-6 py-4 text-center">Performance Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100/60 font-semibold text-slate-700">
-                {vendorPerformanceData.map((v, i) => {
-                  const onTimeVal = parseInt(v.onTime);
-                  const fillVal = parseInt(v.fill);
-                  
-                  const onTimeColor = onTimeVal >= 95 ? "text-emerald-600 font-bold" : onTimeVal >= 85 ? "text-slate-800" : "text-rose-600 font-bold";
-                  const fillColor = fillVal >= 95 ? "text-emerald-600 font-bold" : fillVal >= 85 ? "text-slate-800" : "text-rose-600 font-bold";
-                  
-                  return (
-                    <tr key={i} className="hover:bg-slate-50/50">
-                      <td className="px-6 py-4 font-bold text-slate-900">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-slate-900 text-bp-yellow flex items-center justify-center font-extrabold text-[9px] shadow-xs shrink-0">
-                            {getAvatarInitials(v.name)}
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {delayImpactByCity.map(({ city, delaysList, maxCount }) => (
+                <div key={city} className="space-y-4">
+                  <h4 className="text-[10.5px] font-extrabold text-slate-800 uppercase tracking-wider border-b border-slate-50 pb-1.5 flex items-center justify-between">
+                    <span>{city} Outlet</span>
+                    <span className="text-[9px] text-slate-400 font-semibold leading-none lowercase tracking-normal">
+                      ({delaysList.reduce((sum, item) => sum + item.count, 0)} items delayed)
+                    </span>
+                  </h4>
+                  <div className="space-y-3.5">
+                    {delaysList.map((v, i) => {
+                      const widthPct = Math.max(10, Math.min(100, (v.count / maxCount) * 100));
+                      const barColor = i === 0 ? "from-rose-500 to-rose-600" : i === 1 ? "from-orange-400 to-orange-500" : "from-amber-400 to-amber-500";
+                      
+                      return (
+                        <div key={i} className="space-y-1.5 cursor-help" title={`Vendor Delay Impact (${city}): ${v.vendor} has ${v.count} delayed SKU shipment items`}>
+                          <div className="flex justify-between text-[10.5px] font-bold text-slate-700">
+                            <span className="truncate pr-2">{v.vendor}</span>
+                            <span className="text-slate-900 font-extrabold flex-shrink-0">{v.count} SKUs</span>
                           </div>
-                          <span className="text-bp-green hover:text-bp-green-dark cursor-pointer transition" onClick={() => onNavigate("3", "vendor_wise", v.name)}>{v.name}</span>
+                          <div className="w-full h-3 rounded-full bg-slate-50 border border-slate-100 p-0.5 overflow-hidden">
+                            <div className={`h-full rounded-full bg-gradient-to-r ${barColor} transition-all duration-1000`} style={{ width: `${widthPct}%` }}></div>
+                          </div>
                         </div>
-                      </td>
-                      <td className={`px-6 py-4 text-center ${onTimeColor}`}>{v.onTime}</td>
-                      <td className={`px-6 py-4 text-center ${fillColor}`}>{v.fill}</td>
-                      <td className="px-6 py-4 text-center text-slate-500 font-bold">{v.openPOs}</td>
-                      <td className="px-6 py-4 text-center">
-                        <span className={`px-2.5 py-0.5 rounded text-[8.5px] font-extrabold uppercase border ${getStatusBadgeStyle(v.status)}`}>
-                          {v.status}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                      );
+                    })}
+                    {delaysList.length === 0 && (
+                      <div className="py-12 text-center text-slate-400 font-semibold text-[10.5px]">No active delayed products in {city}.</div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -574,7 +635,7 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
               <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Purchase Order Status</h3>
               <p className="text-[10px] text-slate-400 font-medium mt-0.5">Overview of active order states</p>
             </div>
-            <button onClick={() => onNavigate("3", "overview")} className="text-[10.5px] font-extrabold text-emerald-600 hover:underline">View All</button>
+            {/* <button onClick={() => onNavigate("3", "overview")} className="text-[10.5px] font-extrabold text-emerald-600 hover:underline">View All</button> */}
           </div>
           <div className="flex-grow flex flex-col sm:flex-row justify-center items-center py-2 gap-6">
             <div className="relative w-28 h-28 shrink-0">
@@ -615,96 +676,55 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
         </div>
       </div>
 
-      {/* 4. ROW 3: PRODUCTS AT SUPPLY RISK & VENDOR DELAY IMPACT */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-left">
-        
-        {/* Products at Supply Risk */}
-        <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden card-hover-effect">
-          <div className="px-6 py-5 border-b border-slate-50 flex justify-between items-center">
-            <div>
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Products at Supply Risk</h3>
-              <p className="text-[10px] text-slate-400 font-medium mt-0.5">Critical raw materials and SKUs with supply risk</p>
-            </div>
-            <button onClick={() => onNavigate("2", "store")} className="text-[10.5px] font-extrabold text-emerald-600 hover:underline">View All</button>
-          </div>
-          <div className="overflow-x-auto scrollbar-thin">
-            <table className="w-full text-xs text-left">
-              <thead className="text-[10px] text-slate-400 uppercase tracking-wider font-extrabold bg-slate-50/50 border-b border-slate-50">
-                <tr>
-                  <th className="px-6 py-4">Product</th>
-                  <th className="px-6 py-4">Vendor</th>
-                  <th className="px-6 py-4">Store</th>
-                  <th className="px-6 py-4 text-center">Current Stock</th>
-                  <th className="px-6 py-4 text-center">Days Remaining</th>
-                  <th className="px-6 py-4 text-center">Risk Level</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100/60 font-semibold text-slate-700">
-                {supplyRiskProducts.slice(0, 5).map((p, i) => {
-                  const riskColor = getStatusBadgeStyle(p.risk);
-                  const daysColor = p.daysRemaining <= 3 ? "text-rose-600 animate-pulse font-bold" : p.daysRemaining <= 7 ? "text-amber-500 font-bold" : "text-slate-500 font-semibold";
-                  
-                  return (
-                    <tr key={i} className="hover:bg-slate-50/50">
-                      <td className="px-6 py-4 font-bold text-slate-900 hover:text-bp-green cursor-pointer transition" onClick={() => onNavigate("2", "store", undefined, p.productCode)}>{p.productName}</td>
-                      <td className="px-6 py-4 text-slate-500 font-medium">{p.vendorName}</td>
-                      <td className="px-6 py-4 text-slate-500 font-semibold">{p.storeName}</td>
-                      <td className="px-6 py-4 text-center text-slate-700">{p.currentStock}</td>
-                      <td className={`px-6 py-4 text-center ${daysColor}`}>{p.daysRemaining} days</td>
-                      <td className="px-6 py-4 text-center">
-                        <span className={`px-2.5 py-0.5 rounded text-[8.5px] font-extrabold uppercase border ${riskColor}`}>
-                          {p.risk}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {supplyRiskProducts.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-slate-400 font-medium">No products currently at supply risk.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Vendor Delay Impact Chart */}
-        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 flex flex-col justify-between card-hover-effect">
+      {/* 4. ROW 3: PRODUCTS AT SUPPLY RISK */}
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden text-left card-hover-effect w-full">
+        <div className="px-6 py-5 border-b border-slate-50 flex justify-between items-center">
           <div>
-            <div className="border-b border-slate-50 pb-3.5 mb-5 flex justify-between items-center">
-              <div>
-                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Vendor Delay Impact</h3>
-                <p className="text-[10px] text-slate-400 font-medium mt-0.5">Number of affected products by delayed shipment</p>
-              </div>
-              <button onClick={() => onNavigate("3", "overview")} className="text-[10.5px] font-extrabold text-emerald-600 hover:underline">View All</button>
-            </div>
-            
-            <div className="space-y-4">
-              {vendorDelays.map((v, i) => {
-                const widthPct = Math.max(10, Math.min(100, (v.count / maxDelayCount) * 100));
-                // Use different warm tones for gradient bars
-                const barColor = i === 0 ? "from-rose-500 to-rose-600" : i === 1 ? "from-orange-400 to-orange-500" : "from-amber-400 to-amber-500";
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Products at Supply Risk</h3>
+            <p className="text-[10px] text-slate-400 font-medium mt-0.5">Critical raw materials and SKUs with supply risk</p>
+          </div>
+          <button onClick={() => onNavigate("2", "store")} className="text-[10.5px] font-extrabold text-emerald-600 hover:underline">View All</button>
+        </div>
+        <div className="overflow-x-auto scrollbar-thin">
+          <table className="w-full text-xs text-left">
+            <thead className="text-[10px] text-slate-400 uppercase tracking-wider font-extrabold bg-slate-50/50 border-b border-slate-50">
+              <tr>
+                <th className="px-6 py-4 cursor-help" title="Item name and packaging descriptor">Product</th>
+                <th className="px-6 py-4 cursor-help" title="Primary supplier for this product">Recommended Vendor</th>
+                <th className="px-6 py-4 cursor-help" title="Retail outlet showing low stock level">Store</th>
+                <th className="px-6 py-4 text-center cursor-help" title="Physical inventory count currently available at store">Current Stock</th>
+                <th className="px-6 py-4 text-center cursor-help" title="Estimated days remaining before inventory is fully depleted based on average daily sales">Days Remaining</th>
+                <th className="px-6 py-4 text-center cursor-help" title="Stockout urgency classification (High: <=7d, Medium: 8-15d, Low: >15d)">Risk Level</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100/60 font-semibold text-slate-700">
+              {supplyRiskProducts.slice(0, 5).map((p, i) => {
+                const riskColor = getStatusBadgeStyle(p.risk);
+                const daysColor = p.daysRemaining <= 3 ? "text-rose-600 animate-pulse font-bold" : p.daysRemaining <= 7 ? "text-amber-500 font-bold" : "text-slate-500 font-semibold";
                 
                 return (
-                  <div key={i} className="space-y-1.5">
-                    <div className="flex justify-between text-[10.5px] font-bold text-slate-700">
-                      <span>{v.vendor}</span>
-                      <span className="text-slate-900 font-extrabold">{v.count} SKUs</span>
-                    </div>
-                    <div className="w-full h-3 rounded-full bg-slate-50 border border-slate-100 p-0.5 overflow-hidden">
-                      <div className={`h-full rounded-full bg-gradient-to-r ${barColor} transition-all duration-1000`} style={{ width: `${widthPct}%` }}></div>
-                    </div>
-                  </div>
+                  <tr key={i} className="hover:bg-slate-50/50">
+                    <td className="py-4 px-6 font-bold text-slate-900 hover:text-bp-green cursor-pointer transition" onClick={() => onNavigate("2", "store", undefined, p.productCode)}>{p.productName}</td>
+                    <td className="py-4 px-6 text-slate-500 font-medium">{p.vendorName}</td>
+                    <td className="py-4 px-6 text-slate-500 font-semibold">{p.storeName}</td>
+                    <td className="py-4 px-6 text-center text-slate-700">{p.currentStock}</td>
+                    <td className={`py-4 px-6 text-center ${daysColor}`}>{p.daysRemaining} days</td>
+                    <td className="py-4 px-6 text-center">
+                      <span className={`px-2.5 py-0.5 rounded text-[8.5px] font-extrabold uppercase border ${riskColor}`}>
+                        {p.risk}
+                      </span>
+                    </td>
+                  </tr>
                 );
               })}
-              {vendorDelays.length === 0 && (
-                <div className="py-12 text-center text-slate-400 font-semibold text-xs">No active delayed products today.</div>
+              {supplyRiskProducts.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-6 py-8 text-center text-slate-400 font-medium">No products currently at supply risk.</td>
+                </tr>
               )}
-            </div>
-          </div>
+            </tbody>
+          </table>
         </div>
-
       </div>
 
       {/* 5. AI PROCUREMENT RECOMMENDATIONS */}
@@ -717,12 +737,16 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
               </svg>
               AI Procurement Recommendations
             </h3>
-            <p className="text-[10px] text-slate-400 font-medium mt-0.5">Recommended actions derived from database stock metrics and vendor fulfillment SLA rates</p>
+            {/* <p className="text-[10px] text-slate-400 font-medium mt-0.5">Recommended actions derived from database stock metrics and vendor fulfillment SLA rates</p> */}
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {aiRecommendations.map((rec, i) => (
-            <div key={i} className="bg-slate-50/50 hover:bg-slate-50 border border-slate-100 rounded-2xl p-4 flex flex-col justify-between h-[155px] transition duration-150 text-left">
+            <div 
+              key={i} 
+              className="bg-slate-50/50 hover:bg-slate-50 border border-slate-100 rounded-2xl p-4 flex flex-col justify-between h-[155px] transition duration-150 text-left cursor-help"
+              title={`AI Recommendation: ${rec.title}. Calculated from live stock levels and vendor SLA data.`}
+            >
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <span className={`px-2 py-0.5 rounded text-[8px] font-extrabold border uppercase tracking-wider ${rec.priorityClass}`}>

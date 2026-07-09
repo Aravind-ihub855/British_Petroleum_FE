@@ -214,24 +214,36 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
         </div>
       )}
 
-            {/* KPI Cards Row */}
+      {/* KPI Cards Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-bp-green border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
+        <div 
+          className="bg-white p-5 rounded-2xl border-t-4 border-t-bp-green border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect"
+          title="Total Products: Total unique SKU items stocked in this store"
+        >
           <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Total Products</span>
           <span className="text-3xl font-extrabold tracking-tight text-bp-green mt-2">{totalProducts}</span>
           <p className="text-[9.5px] text-slate-400 font-bold mt-1.5 uppercase tracking-wide">Active catalog items</p>
         </div>
-        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-orange-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
+        <div 
+          className="bg-white p-5 rounded-2xl border-t-4 border-t-orange-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect"
+          title="Below ROL: Number of products currently stocked below their Safety Reorder Level (ROL) requiring a Purchase Requisition"
+        >
           <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Below ROL (PR Needed)</span>
           <span className="text-3xl font-extrabold tracking-tight text-orange-500 mt-2">{atRiskCount}</span>
           <p className="text-[9.5px] text-slate-400 font-bold mt-1.5 uppercase tracking-wide">Purchase requests required</p>
         </div>
-        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-rose-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
+        <div 
+          className="bg-white p-5 rounded-2xl border-t-4 border-t-rose-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect"
+          title="Stockout in 7 Days: Number of products projected to completely stock out within 7 days based on current stock and daily sales"
+        >
           <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Stockout in 7 Days</span>
           <span className="text-3xl font-extrabold tracking-tight text-rose-600 mt-2">{stockoutIn7Days}</span>
           <p className="text-[9.5px] text-slate-400 font-bold mt-1.5 uppercase tracking-wide">Products at risk</p>
         </div>
-        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-rose-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
+        <div 
+          className="bg-white p-5 rounded-2xl border-t-4 border-t-rose-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect"
+          title="Overdue Orders: Active orders whose expected delivery date has passed without stock check-in"
+        >
           <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Overdue Orders</span>
           <span className="text-3xl font-extrabold tracking-tight text-rose-600 mt-2">{overdueOrdersCount}</span>
           <p className="text-[9.5px] text-slate-400 font-bold mt-1.5 uppercase tracking-wide">Orders past deadline</p>
@@ -327,7 +339,7 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
           <table className="w-full text-[11px] text-left">
             <thead className="bg-slate-100 text-slate-700 font-extrabold tracking-wider uppercase border-b border-slate-200 sticky top-0 z-10 text-[9.5px]">
               <tr>
-                <th onClick={() => handleSort("name")} className="py-2.5 px-3.5 pr-4.5 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-left w-[220px] min-w-[220px] relative">
+                <th onClick={() => handleSort("name")} className="py-2.5 px-3.5 pr-4.5 border-r border-slate-200 cursor-help hover:bg-slate-200/50 transition select-none text-left w-[220px] min-w-[220px] relative" title="Product SKU name and sizing information">
                   <div className="flex items-center justify-start pr-2">
                     <span>Product</span>
                   </div>
@@ -335,7 +347,7 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
                     {renderSortIcon("name")}
                   </div>
                 </th>
-                <th onClick={() => handleSort("uom")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center relative">
+                <th onClick={() => handleSort("uom")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-help hover:bg-slate-200/50 transition select-none text-center relative" title="Unit of Measure">
                   <div className="flex items-center justify-center">
                     <span>UOM</span>
                   </div>
@@ -343,7 +355,7 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
                     {renderSortIcon("uom")}
                   </div>
                 </th>
-                <th onClick={() => handleSort("currentStock")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight relative">
+                <th onClick={() => handleSort("currentStock")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-help hover:bg-slate-200/50 transition select-none text-center leading-tight relative" title="Physical count of item units currently on store shelves">
                   <div className="flex flex-col items-center justify-center">
                     <span>Current</span>
                     <span>Stock</span>
@@ -352,7 +364,7 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
                     {renderSortIcon("currentStock")}
                   </div>
                 </th>
-                <th onClick={() => handleSort("safetyStockLevel")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight relative">
+                <th onClick={() => handleSort("safetyStockLevel")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-help hover:bg-slate-200/50 transition select-none text-center leading-tight relative" title="Safety Stock Buffer: Reorder Level (ROL) threshold.">
                   <div className="flex flex-col items-center justify-center">
                     <span>Safety</span>
                     <span>Stock</span>
@@ -361,7 +373,7 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
                     {renderSortIcon("safetyStockLevel")}
                   </div>
                 </th>
-                <th onClick={() => handleSort("avgDailyConsumption")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight relative">
+                <th onClick={() => handleSort("avgDailyConsumption")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-help hover:bg-slate-200/50 transition select-none text-center leading-tight relative" title="Average sales speed (units consumed per day) in this store">
                   <div className="flex flex-col items-center justify-center">
                     <span>Avg Daily</span>
                     <span>Consumption</span>
@@ -370,7 +382,7 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
                     {renderSortIcon("avgDailyConsumption")}
                   </div>
                 </th>
-                <th onClick={() => handleSort("predictedStockoutDate")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight relative">
+                <th onClick={() => handleSort("predictedStockoutDate")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-help hover:bg-slate-200/50 transition select-none text-center leading-tight relative" title="Forecasted date of inventory depletion (Current Stock = 0) based on consumption velocity">
                   <div className="flex flex-col items-center justify-center">
                     <span>Stockout</span>
                     <span>Date</span>
@@ -379,7 +391,7 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
                     {renderSortIcon("predictedStockoutDate")}
                   </div>
                 </th>
-                <th onClick={() => handleSort("daysLeft")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight relative">
+                <th onClick={() => handleSort("daysLeft")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-help hover:bg-slate-200/50 transition select-none text-center leading-tight relative" title="Calculated days left before stock is fully depleted (Current Stock / Avg Daily Consumption)">
                   <div className="flex flex-col items-center justify-center">
                     <span>Days</span>
                     <span>Left</span>
@@ -388,7 +400,7 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
                     {renderSortIcon("daysLeft")}
                   </div>
                 </th>
-                <th onClick={() => handleSort("recommendedRoq")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center relative">
+                <th onClick={() => handleSort("recommendedRoq")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-help hover:bg-slate-200/50 transition select-none text-center relative" title="Recommended Reorder Quantity (ROQ) needed to return stock to maximum safety capacity level">
                   <div className="flex items-center justify-center">
                     <span>ROQ</span>
                   </div>
@@ -396,7 +408,7 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
                     {renderSortIcon("recommendedRoq")}
                   </div>
                 </th>
-                <th onClick={() => handleSort("leadTimeDays")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight relative">
+                <th onClick={() => handleSort("leadTimeDays")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-help hover:bg-slate-200/50 transition select-none text-center leading-tight relative" title="Supplier lead time (number of days between ordering and receiving stock)">
                   <div className="flex flex-col items-center justify-center">
                     <span>Lead</span>
                     <span>Time</span>
@@ -405,7 +417,7 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
                     {renderSortIcon("leadTimeDays")}
                   </div>
                 </th>
-                <th onClick={() => handleSort("orderByDate")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight relative">
+                <th onClick={() => handleSort("orderByDate")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-help hover:bg-slate-200/50 transition select-none text-center leading-tight relative" title="Reorder Deadline: Date by which an order must be placed to prevent stocking out before the supplier lead time is completed">
                   <div className="flex flex-col items-center justify-center">
                     <span>Order</span>
                     <span>By</span>
@@ -414,7 +426,7 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
                     {renderSortIcon("orderByDate")}
                   </div>
                 </th>
-                <th onClick={() => handleSort("prMrStatus")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center relative">
+                <th onClick={() => handleSort("prMrStatus")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-help hover:bg-slate-200/50 transition select-none text-center relative" title="Procurement status: PR (Purchase Required), MR (Material Required), or Monitor (Monitor & Reorder)">
                   <div className="flex items-center justify-center">
                     <span>Status</span>
                   </div>
@@ -422,7 +434,7 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
                     {renderSortIcon("prMrStatus")}
                   </div>
                 </th>
-                <th onClick={() => handleSort("riskLevel")} className="py-2.5 px-3 pr-4 border-r border-slate-200 cursor-pointer hover:bg-slate-200/50 transition select-none text-center leading-tight relative">
+                <th onClick={() => handleSort("riskLevel")} className="py-2.5 px-3 pr-4 border-r border-slate-200 cursor-help hover:bg-slate-200/50 transition select-none text-center leading-tight relative" title="Risk classification based on projected days remaining (High: <=7d, Medium: 8-15d, Low: >15d)">
                   <div className="flex flex-col items-center justify-center">
                     <span>Risk</span>
                     <span>Level</span>

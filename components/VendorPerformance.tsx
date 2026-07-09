@@ -24,6 +24,7 @@ export default function VendorPerformance({
   onNavigate
 }: VendorPerformanceProps) {
   const { vendors, masterProducts, allInventory, purchaseOrders, vendorIssues, loading } = useData();
+  const [statusFilter, setStatusFilter] = React.useState("All");
   
   // Set defaults if state is empty
   useEffect(() => {
@@ -139,7 +140,7 @@ export default function VendorPerformance({
       // Volume & quality metrics for weighted org formula
       deliveredUnits: deliveredPOs.reduce((sum, po) => sum + ((po as any).receivedItems || 0), 0),
       rejectedUnits:  deliveredPOs.reduce((sum, po) => sum + ((po as any).rejectedItems || 0), 0),
-      acceptedUnits:  deliveredPOs.reduce((sum, po) => sum + ((po as any).acceptedItems || 0), 0),
+      acceptedUnits:  deliveredPOs.reduce((sum, po) => sum + ((po as any).receivedItems || 0), 0) - deliveredPOs.reduce((sum, po) => sum + ((po as any).rejectedItems || 0), 0),
       rejectionRatePct: (() => {
         const totalDel = deliveredPOs.reduce((s, po) => s + ((po as any).receivedItems || 0), 0);
         const totalRej = deliveredPOs.reduce((s, po) => s + ((po as any).rejectedItems || 0), 0);
@@ -154,9 +155,17 @@ export default function VendorPerformance({
     // Monthly spend: sum totalAmount of all POs for this vendor
     const vPOs = purchaseOrders ? purchaseOrders.filter(po => po.vendorId === vendor.id) : [];
     const monthlySpend = vPOs.reduce((sum, po) => sum + ((po as any).totalAmount || 0), 0);
-    // Acceptance-adjusted score: P_i × (1 − rejectionRate/100)
-    // This is the per-vendor contribution factor to the org weighted average
-    const weightedScore = parseFloat((metrics.performanceScore * (1 - metrics.rejectionRatePct / 100)).toFixed(1));
+    // Organisation Weighted Score = Performance Score * (Net Accepted Units / Delivered Units)
+    const weightedScore = metrics.deliveredUnits > 0
+      ? parseFloat((metrics.performanceScore * (metrics.acceptedUnits / metrics.deliveredUnits)).toFixed(1))
+      : metrics.performanceScore;
+
+    // Status is determined based on Organisation Weighted Score (weightedScore)
+    let status: "Excellent" | "Good" | "Needs Improvement" | "Critical" = "Good";
+    if (weightedScore >= 95.0) status = "Excellent";
+    else if (weightedScore >= 85.0) status = "Good";
+    else if (weightedScore >= 75.0) status = "Needs Improvement";
+    else status = "Critical";
 
     return {
       vendorId: vendor.id,
@@ -172,7 +181,7 @@ export default function VendorPerformance({
       deliveredUnits: metrics.deliveredUnits,
       acceptedUnits: metrics.acceptedUnits,
       monthlySpend,
-      status: metrics.status
+      status
     };
   }).sort((a, b) => b.performanceScore - a.performanceScore);
 
@@ -216,7 +225,11 @@ export default function VendorPerformance({
     ? parseFloat((vendorProducts.reduce((sum, p) => sum + p.overallScore, 0) / vendorProducts.length).toFixed(1))
     : 8.5;
   const activeVendorPerfScore = activeVendorMetrics ? activeVendorMetrics.performanceScore : 95.0;
-  const activeVendorWeightedScore = activeVendorMetrics ? parseFloat((activeVendorMetrics.performanceScore * (1 - activeVendorMetrics.rejectionRatePct / 100)).toFixed(1)) : 95.0;
+  const activeVendorWeightedScore = activeVendorMetrics
+    ? (activeVendorMetrics.deliveredUnits > 0
+        ? parseFloat((activeVendorMetrics.performanceScore * (activeVendorMetrics.acceptedUnits / activeVendorMetrics.deliveredUnits)).toFixed(1))
+        : activeVendorMetrics.performanceScore)
+    : 95.0;
   const activeVendorDelivered = activeVendorMetrics ? activeVendorMetrics.deliveredUnits : 0;
   const activeVendorRejected = activeVendorMetrics ? activeVendorMetrics.rejectedUnits : 0;
   const activeVendorRejectionRate = activeVendorMetrics ? activeVendorMetrics.rejectionRatePct : 0.0;
@@ -312,19 +325,8 @@ export default function VendorPerformance({
   return (
     <div className="space-y-8 animate-fadeIn text-slate-800">
       
-      {/* Top Tab Selector Header Card */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm card-hover-effect text-left relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-1.5 h-full bg-bp-green" />
-        <div className="pl-2">
-          <h2 className="text-lg font-extrabold text-slate-900 tracking-tight">
-            Sourcing &amp; Vendor Management
-          </h2>
-          {/* <p className="text-[10px] text-slate-400 font-semibold mt-0.5 leading-snug">
-            Evaluate lead times, pricing accuracy, and procurement intelligence across vendor networks.
-          </p> */}
-        </div>
 
-        {/* 3-tab Switcher with premium look */}
+  {/* 3-tab Switcher with premium look */}
         <div className="flex bg-slate-100/90 p-1.5 rounded-2xl w-fit gap-1.5 border border-slate-200/40 shadow-inner">
           <button
             onClick={() => setSubTab("overview")}
@@ -357,55 +359,28 @@ export default function VendorPerformance({
             Product Sourcing
           </button>
         </div>
-      </div>
-
       {/* RENDER ACTIVE SUB-TAB */}
 
       {subTab === "overview" && (
         <div className="space-y-8 animate-fadeIn">
           {/* 6-Card KPI Grid Row */}
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-            
-            {/* Card 1: Overall Vendor Performance */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between card-hover-effect text-left relative overflow-hidden">
-              <div className="space-y-1">
-                <span className="text-[9.5px] font-extrabold text-slate-400 uppercase tracking-wider block">
-                  Overall Performance
-                </span>
-                <span className="text-3xl font-extrabold tracking-tight text-slate-900 mt-2 block">
-                  {avgPerformanceScore.toFixed(1)}%
-                </span>
-                <p className="text-[9px] text-slate-400 font-bold block">Weighted Performance Score</p>
-                <div className="flex items-center gap-1 text-[8.5px] font-bold text-slate-400 mt-1">
-                  <span>{rankedVendors.length} vendors tracked</span>
-                  <span className="text-slate-300">·</span>
-                  <span>Current month</span>
-                </div>
-              </div>
-              <div className="relative w-12 h-12 flex-shrink-0">
-                {/* <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36"> */}
-                <div className="absolute inset-0 flex items-center justify-center text-[9px] font-extrabold text-emerald-800">
-                  {Math.round(avgPerformanceScore)}%
-                </div>
-              </div>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
 
-            {/* Card 2: Organisation Weighted Score */}
-            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 p-5 rounded-2xl border border-emerald-100 shadow-sm flex items-center justify-between card-hover-effect text-left relative overflow-hidden">
+                        {/* Card 2: Organisation Weighted Score */}
+            <div 
+              className="bg-gradient-to-br from-emerald-50 to-teal-50 p-5 rounded-2xl border border-emerald-100 shadow-sm flex items-center justify-between card-hover-effect text-left relative overflow-hidden cursor-help"
+              title="Organisation Weighted Score = Σ(Performance Score × Net Accepted Units) / Σ(Net Accepted Units), Net Accepted Units = Delivered Units - Rejected Units."
+            >
               <div className="absolute top-0 left-0 w-1 h-full bg-emerald-400 rounded-l-2xl" />
               <div className="space-y-1 pl-1">
                 <span className="text-[9.5px] font-extrabold text-emerald-700 uppercase tracking-wider block">
-                  Organisation Score
+                  Organisation Weighted Score
                 </span>
                 <span className="text-3xl font-extrabold tracking-tight text-emerald-900 mt-2 block">
                   {organisationWeightedScore.toFixed(1)}%
                 </span>
-                <p className="text-[9px] text-emerald-600 font-bold block">Volume-Weighted Avg</p>
-                <div className="flex items-center gap-1 text-[8.5px] font-bold text-emerald-500 mt-1">
-                  <span title="Σ(Perf × AcceptedUnits) ÷ Σ(AcceptedUnits)" className="cursor-help underline decoration-dotted">Formula: P×Accepted ÷ ΣAccepted</span>
-                </div>
               </div>
-              <div className="relative w-12 h-12 flex-shrink-0">
+              {/* <div className="relative w-12 h-12 flex-shrink-0">
                 <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                   <circle cx="18" cy="18" r="15.915" fill="none" stroke="#d1fae5" strokeWidth="3.5" />
                   <circle
@@ -422,19 +397,38 @@ export default function VendorPerformance({
                 <div className="absolute inset-0 flex items-center justify-center text-[9px] font-extrabold text-emerald-700">
                   {Math.round(organisationWeightedScore)}%
                 </div>
-              </div>
+              </div> */}
             </div>
+            
+            {/* Card 1: Overall Vendor Performance */}
+            {/* <div 
+              className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between card-hover-effect text-left relative overflow-hidden cursor-help"
+              title="Overall Performance = Simple average of all active vendors' performance scores."
+            >
+              <div className="space-y-1">
+                <span className="text-[9.5px] font-extrabold text-slate-400 uppercase tracking-wider block">
+                  Overall Performance
+                </span>
+                <span className="text-3xl font-extrabold tracking-tight text-slate-900 mt-2 block">
+                  {avgPerformanceScore.toFixed(1)}%
+                </span>
+              </div>
+            </div> */}
+
+
+
+            {/* Card 3: Excellent (>=95.0%) */}
             <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between card-hover-effect text-left">
               <div className="space-y-1">
                 <span className="text-[9.5px] font-extrabold text-slate-400 uppercase tracking-wider block">
-                  Excellent (≥95.0%)
+                  Excellent 
                 </span>
                 <span className="text-3xl font-extrabold tracking-tight text-slate-900 mt-2 block">
                   {excellentCount}
                 </span>
-                <p className="text-[9px] text-slate-400 font-bold block">
-                  {rankedVendors.length > 0 ? Math.round((excellentCount / rankedVendors.length) * 100) : 0}% of Total Vendors
-                </p>
+                <span className="text-[11px] text-slate-800 tracking-wide font-bold block mt-1">
+                  ( ≥ 95.0%)
+                </span>
               </div>
               <div className="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0 text-emerald-600">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -443,18 +437,17 @@ export default function VendorPerformance({
               </div>
             </div>
 
-            {/* Card 3: Good (85.0%-95.0%) */}
+            {/* Card 4: Good (85.0%-95.0%) */}
             <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between card-hover-effect text-left">
               <div className="space-y-1">
                 <span className="text-[9.5px] font-extrabold text-slate-400 uppercase tracking-wider block">
-                  Good (85.0%-95.0%)
+                  Good 
                 </span>
                 <span className="text-3xl font-extrabold tracking-tight text-slate-900 mt-2 block">
                   {goodCount}
                 </span>
-                <p className="text-[9px] text-slate-400 font-bold block">
-                  {rankedVendors.length > 0 ? Math.round((goodCount / rankedVendors.length) * 100) : 0}% of Total Vendors
-                </p>
+                <span className="text-[11px] text-slate-800 tracking-wide font-bold block mt-1">
+                (85.0%-95.0%)                 </span>
               </div>
               <div className="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0 text-emerald-600">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -463,38 +456,38 @@ export default function VendorPerformance({
               </div>
             </div>
 
-            {/* Card 4: Needs Improvement (75.0%-85.0%) */}
+            {/* Card 5: Needs Improvement (75.0%-85.0%) */}
             <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between card-hover-effect text-left">
               <div className="space-y-1">
                 <span className="text-[9.5px] font-extrabold text-slate-400 uppercase tracking-wider block">
-                  Needs Imp. (75.0%-85.0%)
+                  Needs Improvement 
                 </span>
                 <span className="text-3xl font-extrabold tracking-tight text-slate-900 mt-2 block">
                   {needsImprovementCount}
                 </span>
-                <p className="text-[9px] text-slate-400 font-bold block">
-                  {rankedVendors.length > 0 ? Math.round((needsImprovementCount / rankedVendors.length) * 100) : 0}% of Total Vendors
-                </p>
+                <span className="text-[11px] text-slate-800 tracking-wide font-bold block mt-1">
+                  (75.0%-85.0%)
+                </span>
               </div>
-              <div className="w-10 h-10 rounded-full bg-amber-50 border border-amber-100 flex items-center justify-center flex-shrink-0 text-amber-500">
+              <div className="w-10 h-10 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center flex-shrink-0 text-rose-500">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 10h.01M15 10h.01M9 15h6M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
             </div>
 
-            {/* Card 5: Critical (<75.0%) */}
+            {/* Card 6: Critical (<75.0%) */}
             <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between card-hover-effect text-left">
               <div className="space-y-1">
                 <span className="text-[9.5px] font-extrabold text-slate-400 uppercase tracking-wider block">
-                  Critical (&lt;75.0%)
+                  Critical 
                 </span>
                 <span className="text-3xl font-extrabold tracking-tight text-slate-900 mt-2 block">
                   {criticalCount}
                 </span>
-                <p className="text-[9px] text-slate-400 font-bold block">
-                  {rankedVendors.length > 0 ? Math.round((criticalCount / rankedVendors.length) * 100) : 0}% of Total Vendors
-                </p>
+                <span className="text-[11px] text-slate-800 tracking-wide font-bold block mt-1">
+                  (&lt;75.0%)
+                </span>
               </div>
               <div className="w-10 h-10 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center flex-shrink-0 text-rose-500">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -507,7 +500,7 @@ export default function VendorPerformance({
 
           {/* Ranking Table Card */}
           <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden text-left w-full card-hover-effect">
-            <div className="px-6 py-5 border-b border-slate-50 flex items-center justify-between">
+            <div className="px-6 py-5 border-b border-slate-50 flex items-center justify-between flex-wrap gap-4">
               <div>
                 <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
                   Vendor Performance Ranking
@@ -515,9 +508,20 @@ export default function VendorPerformance({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </h3>
-                {/* <p className="text-[10px] text-slate-400 font-semibold mt-0.5 leading-snug">
-                  Performance rankings mapped to cost quality reject levels and lead time delivery rates
-                </p> */}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-500">Status Filter:</span>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 py-1.5 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-bp-green transition duration-150 shadow-sm"
+                >
+                  <option value="All">All Statuses</option>
+                  <option value="Excellent">Excellent</option>
+                  <option value="Good">Good</option>
+                  <option value="Needs Improvement">Needs Improvement</option>
+                  <option value="Critical">Critical</option>
+                </select>
               </div>
             </div>
             
@@ -529,128 +533,113 @@ export default function VendorPerformance({
                     <th className="py-3 px-2 border-r border-slate-200 text-center leading-tight">
                       <div className="flex flex-col items-center justify-center">
                         <span>Fill Rate</span>
-                        <span className="text-[8px] text-slate-400 lowercase">(Weight 40%)</span>
+                        {/* <span className="text-[8px] text-slate-400 lowercase">(Weight 40%)</span> */}
                       </div>
                     </th>
                     <th className="py-3 px-2 border-r border-slate-200 text-center leading-tight">
                       <div className="flex flex-col items-center justify-center">
                         <span>On-Time Delivery</span>
-                        <span className="text-[8px] text-slate-400 lowercase">(Weight 25%)</span>
+                        {/* <span className="text-[8px] text-slate-400 lowercase">(Weight 25%)</span> */}
                       </div>
                     </th>
                     <th className="py-3 px-2 border-r border-slate-200 text-center leading-tight">
                       <div className="flex flex-col items-center justify-center">
                         <span>Order Accuracy</span>
-                        <span className="text-[8px] text-slate-400 lowercase">(Weight 20%)</span>
+                        {/* <span className="text-[8px] text-slate-400 lowercase">(Weight 20%)</span> */}
                       </div>
                     </th>
                     <th className="py-3 px-2 border-r border-slate-200 text-center leading-tight">
                       <div className="flex flex-col items-center justify-center">
                         <span>Stockout Events</span>
-                        <span className="text-[8px] text-slate-400 lowercase">(Weight 10%)</span>
+                        {/* <span className="text-[8px] text-slate-400 lowercase">(Weight 10%)</span> */}
                       </div>
                     </th>
                     <th className="py-3 px-2 border-r border-slate-200 text-center leading-tight">
                       <div className="flex flex-col items-center justify-center">
                         <span>Avg. Actual Lead Time</span>
-                        <span className="text-[8px] text-slate-400 lowercase">(Weight 5%)</span>
+                        {/* <span className="text-[8px] text-slate-400 lowercase">(Weight 5%)</span> */}
                       </div>
                     </th>
                     <th className="py-3 px-2 border-r border-slate-200 text-center leading-tight">
                       <div className="flex flex-col items-center justify-center">
                         <span>Monthly PO Spend</span>
-                        <span className="text-[8px] text-slate-400 lowercase">(all POs this month)</span>
+                        {/* <span className="text-[8px] text-slate-400 lowercase">(all POs this month)</span> */}
                       </div>
                     </th>
+
                     <th 
                       className="py-3 px-2 border-r border-slate-200 text-center leading-tight cursor-help"
-                      title="Performance Score is a weighted calculation of Fill Rate (40%), On-Time Delivery (25%), Order Accuracy (20%), Stockout Events (10%), and Avg. Actual Lead Time (5%)."
-                    >
-                      <div className="flex flex-col items-center justify-center">
-                        <span>Performance Score</span>
-                        <span className="text-[8px] text-slate-400 lowercase">(0-100)</span>
-                      </div>
-                    </th>
-                    <th 
-                      className="py-3 px-2 border-r border-slate-200 text-center leading-tight cursor-help"
-                      title="Organisation Weighted Score = Performance Score × (1 - Rejection Rate)."
+                      title="Organisation Weighted Score = Performance Score × (Net Accepted Units / Delivered Units). Net Accepted Units = Delivered Units - Rejected Units."
                     >
                       <div className="flex flex-col items-center justify-center">
                         <span>Organisation</span>
                         <span>Weighted Score</span>
                       </div>
                     </th>
-                    <th className="py-3 px-2 border-r border-slate-200 text-center leading-tight">
-                      <div className="flex flex-col items-center justify-center">
-                        <span>Percentile</span>
-                        <span className="text-[8px] text-slate-400 lowercase">(rank factor)</span>
-                      </div>
-                    </th>
                     <th className="py-3 px-3.5 text-center">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100/60 font-semibold text-slate-700">
-                  {rankedVendors.map((row, idx) => {
-                    const scoreColor = row.weightedScore >= 95 ? "text-emerald-600" : row.weightedScore >= 85 ? "text-blue-600" : row.weightedScore >= 75 ? "text-amber-600" : "text-rose-600";
-                    const percentile = Math.round(((rankedVendors.length - idx) / rankedVendors.length) * 100);
-                    
-                    const statusBadgeClass =
-                      row.status === "Excellent" ? "text-emerald-700 bg-emerald-50 border-emerald-100" :
-                      row.status === "Good" ? "text-blue-700 bg-blue-50 border-blue-100" :
-                      row.status === "Needs Improvement" ? "text-amber-700 bg-amber-50 border-amber-100 animate-pulse" :
-                      "text-rose-700 bg-rose-50 border-rose-100 animate-pulse";
- 
-                    return (
-                      <tr key={idx} className="hover:bg-slate-50/50 transition duration-75">
-                        {/* Vendor Name */} 
-                        <td className="py-2.5 px-3.5 font-bold text-slate-800 hover:text-bp-green cursor-pointer border-r border-slate-100 text-left"
-                          onClick={() => {
-                            setSelectedVendorName(row.vendorName);
-                            setSubTab("vendor_wise");
-                          }}
-                        >
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-full bg-slate-900 text-bp-yellow flex items-center justify-center font-extrabold text-[10px] shadow-sm flex-shrink-0">
-                              {getAvatarInitials(row.vendorName)}
+                  {rankedVendors
+                    .filter(v => statusFilter === "All" || v.status.toLowerCase() === statusFilter.toLowerCase())
+                    .map((row, idx) => {
+                      const scoreColor = row.weightedScore >= 95 ? "text-emerald-600" : row.weightedScore >= 85 ? "text-blue-600" : row.weightedScore >= 75 ? "text-amber-600" : "text-rose-600";
+                      
+                      const statusBadgeClass =
+                        row.status === "Excellent" ? "text-emerald-700 bg-emerald-50 border-emerald-100" :
+                        row.status === "Good" ? "text-blue-700 bg-blue-50 border-blue-100" :
+                        row.status === "Needs Improvement" ? "text-amber-700 bg-amber-50 border-amber-100 animate-pulse" :
+                        "text-rose-700 bg-rose-50 border-rose-100 animate-pulse";
+  
+                      return (
+                        <tr key={idx} className="hover:bg-slate-50/50 transition duration-75">
+                          {/* Vendor Name */} 
+                          <td className="py-2.5 px-3.5 font-bold text-slate-800 hover:text-bp-green cursor-pointer border-r border-slate-100 text-left"
+                            onClick={() => {
+                              setSelectedVendorName(row.vendorName);
+                              setSubTab("vendor_wise");
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-full bg-slate-900 text-bp-yellow flex items-center justify-center font-extrabold text-[10px] shadow-sm flex-shrink-0">
+                                {getAvatarInitials(row.vendorName)}
+                              </div>
+                              <div className="leading-tight">
+                                {row.vendorName}
+                              </div>
                             </div>
-                            <div className="leading-tight">
-                              {row.vendorName}
-                            </div>
-                          </div>
-                        </td>
-                        {/* Fill Rate */}
-                        <td className="py-2.5 px-2 text-center text-slate-600 font-medium border-r border-slate-100">{row.fillRateVal.toFixed(1)}%</td>
-                        {/* On-Time Delivery */}
-                        <td className="py-2.5 px-2 text-center text-slate-600 font-medium border-r border-slate-100">{row.onTimePercent}%</td>
-                        {/* Order Accuracy */}
-                        <td className="py-2.5 px-2 text-center text-slate-600 font-medium border-r border-slate-100">{row.orderAccuracyVal.toFixed(1)}%</td>
-                        {/* Stockouts */}
-                        <td className={`py-2.5 px-2 text-center text-slate-600 font-medium border-r border-slate-100`}>{row.stockouts} {row.stockouts === 1 ? "incident" : "incidents"}</td>
-                        {/* Lead Time */}
-                        <td className="py-2.5 px-2 text-center text-slate-600 font-medium border-r border-slate-100">{row.leadTimeDays.toFixed(1)} days</td>
-                        {/* Monthly PO Spend */}
-                        <td className="py-2.5 px-2 text-center text-slate-600 font-medium border-r border-slate-100">
-                          {row.monthlySpend >= 1000000
-                            ? `$${(row.monthlySpend / 1000000).toFixed(1)}M`
-                            : row.monthlySpend >= 1000
-                            ? `$${(row.monthlySpend / 1000).toFixed(0)}K`
-                            : row.monthlySpend > 0 ? `$${row.monthlySpend.toFixed(0)}` : "—"}
-                        </td>
-                        {/* Performance Score */}
-                        <td className={`py-2.5 px-2 text-center font-extrabold text-slate-700 border-r border-slate-100`}>{row.performanceScore.toFixed(1)}</td>
-                        {/* Weighted Score */}
-                        <td className={`py-2.5 px-2 text-center font-extrabold border-r border-slate-100 ${scoreColor}`}>{row.weightedScore.toFixed(1)}</td>
-                        {/* Percentile */}
-                        <td className={`py-2.5 px-2 text-center font-extrabold text-slate-600 border-r border-slate-100`}>{percentile}th</td>
-                        {/* Status */}
-                        <td className="py-2.5 px-3.5 text-center">
-                          <span className={`px-2 py-0.5 rounded text-[8.5px] font-extrabold border uppercase tracking-wider inline-block ${statusBadgeClass}`}>
-                            {row.status}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                          </td>
+                          {/* Fill Rate */}
+                          <td className="py-2.5 px-2 text-center text-slate-600 font-medium border-r border-slate-100">{row.fillRateVal.toFixed(1)}%</td>
+                          {/* On-Time Delivery */}
+                          <td className="py-2.5 px-2 text-center text-slate-600 font-medium border-r border-slate-100">{row.onTimePercent}%</td>
+                          {/* Order Accuracy */}
+                          <td className="py-2.5 px-2 text-center text-slate-600 font-medium border-r border-slate-100">{row.orderAccuracyVal.toFixed(1)}%</td>
+                          {/* Stockouts */}
+                          <td className={`py-2.5 px-2 text-center text-slate-600 font-medium border-r border-slate-100`}>{row.stockouts} {row.stockouts === 1 ? "incident" : "incidents"}</td>
+                          {/* Lead Time */}
+                          <td className="py-2.5 px-2 text-center text-slate-600 font-medium border-r border-slate-100">{row.leadTimeDays.toFixed(1)} days</td>
+                          {/* Monthly PO Spend */}
+                          <td className="py-2.5 px-2 text-center text-slate-600 font-medium border-r border-slate-100">
+                            {row.monthlySpend >= 1000000
+                              ? `$${(row.monthlySpend / 1000000).toFixed(1)}M`
+                              : row.monthlySpend >= 1000
+                              ? `$${(row.monthlySpend / 1000).toFixed(0)}K`
+                              : row.monthlySpend > 0 ? `$${row.monthlySpend.toFixed(0)}` : "—"}
+                          </td>
+                          {/* Performance Score */}
+                          {/* <td className={`py-2.5 px-2 text-center font-extrabold text-slate-700 border-r border-slate-100`}>{row.performanceScore.toFixed(1)}</td> */}
+                          {/* Weighted Score */}
+                          <td className={`py-2.5 px-2 text-center font-extrabold border-r border-slate-100 ${scoreColor}`}>{row.weightedScore.toFixed(1)}</td>
+                          {/* Status */}
+                          <td className="py-2.5 px-3.5 text-center">
+                            <span className={`px-2 py-0.5 rounded text-[8.5px] font-extrabold border uppercase tracking-wider inline-block ${statusBadgeClass}`}>
+                              {row.status}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
                 </tbody>
               </table>
             </div>
@@ -779,8 +768,8 @@ export default function VendorPerformance({
                     <span className="text-slate-900 font-extrabold mt-1 block">{activeVendor.contractStatus}</span>
                   </div>
                   <div className="bg-slate-55 bg-slate-50/50 p-3 rounded-xl border border-slate-100 shadow-2xs">
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Payment Terms</span>
-                    <span className="text-slate-900 font-extrabold mt-1 block">{activeVendor.paymentTerms}</span>
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Email ID</span>
+                    <span className="text-slate-900 font-extrabold mt-1 block">{activeVendor.email || "N/A"}</span>
                   </div>
                 </div>
               </div>
@@ -790,7 +779,7 @@ export default function VendorPerformance({
             <div className="mt-8 p-5 bg-slate-50/50 rounded-2xl border border-slate-100/80 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 text-left">
               <div 
                 className="bg-emerald-50 p-4 rounded-xl border border-emerald-200 shadow-2xs hover:scale-[1.02] transition duration-150 cursor-help ring-1 ring-emerald-500/20"
-                title="Organisation Weighted Score = Performance Score × (1 - Rejection Rate)"
+                title="Organisation Weighted Score = Performance Score × (Net Accepted Units / Delivered Units). Net Accepted Units = Delivered Units - Rejected Units."
               >
                 <span className="text-[9px] font-extrabold text-emerald-800 uppercase tracking-wider block flex items-center gap-1">
                   Organisation Weighted Score
@@ -1028,34 +1017,7 @@ export default function VendorPerformance({
       {subTab === "product_wise" && activeProduct && (
         <div className="space-y-8 animate-fadeIn">
           
-          {/* Sourcing Summary Banner */}
-          {vendorCount === 1 ? (
-            <div className="p-5 bg-rose-50/60 border border-rose-100/80 rounded-2xl flex items-start gap-4 text-left card-hover-effect relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-1.5 h-full bg-rose-500 animate-pulse" />
-              <svg className="w-5 h-5 text-rose-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              <div>
-                <h4 className="text-xs font-extrabold text-rose-800 uppercase tracking-wider">Critical Sourcing Risk - Single Vendor Dependency</h4>
-                <p className="text-xs text-rose-700 mt-1.5 leading-relaxed font-semibold">
-                  This product is supplied solely by {productVendors[0]?.vendorName || "one vendor"}. Qualify a second distributor immediately to secure replenishment operations.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="p-5 bg-emerald-50/60 border border-emerald-100/80 rounded-2xl flex items-start gap-4 text-left card-hover-effect relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-1.5 h-full bg-[#008751]" />
-              <svg className="w-5 h-5 text-emerald-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <div>
-                <h4 className="text-xs font-extrabold text-emerald-800 uppercase tracking-wider">Diversified Sourcing (Safe)</h4>
-                <p className="text-xs text-emerald-700 mt-1.5 leading-relaxed font-semibold">
-                  Product has {vendorCount} active distributors. Recommended best-performing source is <span className="font-extrabold text-slate-850 underline">{bestValueVendor?.vendorName}</span>.
-                </p>
-              </div>
-            </div>
-          )}
+      
 
           {/* Product Header Card */}
           <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm text-left space-y-6 card-hover-effect relative overflow-hidden">
@@ -1089,7 +1051,7 @@ export default function VendorPerformance({
                 </div>
                 <div>
                   <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
-                    Sourcing Analysis: {activeProduct.name}
+                  {activeProduct.name}
                   </h2>
                   {/* <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Sourcing allocations, storage rules and baseline cost margins</p> */}
                 </div>
@@ -1101,10 +1063,10 @@ export default function VendorPerformance({
                   <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">UOM Category</span>
                   <span className="text-slate-900 font-extrabold mt-1 block">{activeProduct.uom}</span>
                 </div>
-                <div className="bg-slate-55 bg-slate-50/50 p-3 rounded-xl border border-slate-100 shadow-2xs">
+                {/* <div className="bg-slate-55 bg-slate-50/50 p-3 rounded-xl border border-slate-100 shadow-2xs">
                   <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Base Price</span>
                   <span className="text-slate-900 font-extrabold mt-1 block">${activeProduct.unitPrice}</span>
-                </div>
+                </div> */}
                 <div className="bg-slate-55 bg-slate-50/50 p-3 rounded-xl border border-slate-100 shadow-2xs">
                   <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Storage Medium</span>
                   <span className="text-slate-900 font-extrabold mt-1 block">{activeProduct.storageLocation}</span>
@@ -1136,21 +1098,22 @@ export default function VendorPerformance({
                   <span className="text-[9.5px] font-extrabold text-slate-400 uppercase tracking-wider block">Recommended ROQ</span>
                   <span className="text-sm font-extrabold text-slate-900 mt-1.5 block">{totalRoq.toLocaleString()} units</span>
                 </div>
-                <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 shadow-2xs col-span-2 md:col-span-1">
+                              <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150">
+                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Active Vendors</span>
+                <span className="text-base font-extrabold text-slate-900 mt-1 block">{vendorCount}</span>
+              </div>
+                {/* <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 shadow-2xs col-span-2 md:col-span-1">
                   <span className="text-[9.5px] font-extrabold text-slate-400 uppercase tracking-wider block">Stock Status</span>
                   <span className={`text-sm font-extrabold mt-1.5 block ${totalCurrentStock <= totalRol ? "text-rose-600 animate-pulse" : "text-emerald-600"}`}>
                     {totalCurrentStock <= totalRol ? "Reorder Needed" : "Sufficient Stock"}
                   </span>
-                </div>
+                </div> */}
               </div>
             </div>
 
             {/* Product summary KPI band */}
-            <div className="mt-8 p-5 bg-slate-50/40 rounded-2xl border border-slate-100 grid grid-cols-2 lg:grid-cols-5 gap-4 text-left pl-2">
-              <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150">
-                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Active Vendors</span>
-                <span className="text-base font-extrabold text-slate-900 mt-1 block">{vendorCount}</span>
-              </div>
+            {/* <div className="mt-8 p-5 bg-slate-50/40 rounded-2xl border border-slate-100 grid grid-cols-2 lg:grid-cols-5 gap-4 text-left pl-2">
+
               <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150">
                 <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Recommended Source</span>
                 <span className="text-base font-extrabold text-[#008751] mt-1 block">{bestValueVendor?.vendorName || "N/A"}</span>
@@ -1173,8 +1136,39 @@ export default function VendorPerformance({
                   {productVendors.length > 0 ? (productVendors.reduce((sum, v) => sum + v.weightedScore, 0) / productVendors.length).toFixed(1) : "95.0"}
                 </span>
               </div>
-            </div>
+            </div> */}
           </div>
+
+              {/* Sourcing Summary Banner */}
+{vendorCount === 1 && (
+  <div className="p-5 bg-rose-50/60 border border-rose-100/80 rounded-2xl flex items-start gap-4 text-left card-hover-effect relative overflow-hidden">
+    <div className="absolute top-0 left-0 w-1.5 h-full bg-rose-500 animate-pulse" />
+    <svg
+      className="w-5 h-5 text-rose-500 mt-0.5 flex-shrink-0"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+      />
+    </svg>
+
+    <div>
+      <h4 className="text-xs font-extrabold text-rose-800 uppercase tracking-wider">
+        Critical Sourcing Risk - Single Vendor Dependency
+      </h4>
+      <p className="text-xs text-rose-700 mt-1.5 leading-relaxed font-semibold">
+        This product is supplied solely by{" "}
+        {productVendors[0]?.vendorName || "one vendor"}. Qualify a second
+        distributor immediately to secure replenishment operations.
+      </p>
+    </div>
+  </div>
+)}
 
           {/* Vendors for this product table */}
           <div className="bg-white rounded-3xl border-t-4 border-t-bp-green border-x border-b border-slate-100 shadow-sm overflow-hidden text-left card-hover-effect">

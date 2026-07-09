@@ -25,7 +25,7 @@ const getTabMetadata = (tab: string) => {
   switch (tab) {
     case "1":
       return {
-        description: "Executive summary of convenience store inventory, stockout risks, and forecast metrics.",
+        description: "",
       };
     case "2":
       return {
@@ -33,7 +33,7 @@ const getTabMetadata = (tab: string) => {
       };
     case "3":
       return {
-        description: "Track lead times, order fill rates, and vendor supply metrics.",
+        description: "",
       };
     case "4":
       return {

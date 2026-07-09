@@ -264,13 +264,16 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
   };
 
   return (
-    <div className="space-y-8 animate-fadeIn">
+      <div className="space-y-8 animate-fadeIn">
 
       {/* KPI Cards */}
       <div className={`grid gap-5 ${isStoreManager ? "grid-cols-2 lg:grid-cols-5" : "grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"}`}>
 
         {!isStoreManager && (
-          <div className="bg-white border-t-4 border-t-bp-green border-x border-b border-slate-100 rounded-2xl p-5 shadow-sm card-hover-effect text-left">
+          <div 
+            className="bg-white border-t-4 border-t-bp-green border-x border-b border-slate-100 rounded-2xl p-5 shadow-sm card-hover-effect text-left"
+            title="Total Stores: Total retail locations currently tracked in the active network"
+          >
             <div className="flex items-center gap-2 text-slate-400 mb-2">
               <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center text-bp-green flex-shrink-0">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
@@ -282,7 +285,10 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
           </div>
         )}
 
-        <div className="bg-white border-t-4 border-t-bp-green border-x border-b border-slate-100 rounded-2xl p-5 shadow-sm card-hover-effect text-left">
+        <div 
+          className="bg-white border-t-4 border-t-bp-green border-x border-b border-slate-100 rounded-2xl p-5 shadow-sm card-hover-effect text-left"
+          title="Total Products: Total unique item SKU codes managed in the master data catalog"
+        >
           <div className="flex items-center gap-2 text-slate-400 mb-2">
             <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center text-bp-green flex-shrink-0">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
@@ -293,7 +299,10 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
           <p className="text-[10px] text-slate-400 mt-1 font-medium">Active items</p>
         </div>
 
-        <div className="bg-white border-t-4 border-t-bp-yellow border-x border-b border-slate-100 rounded-2xl p-5 shadow-sm card-hover-effect text-left">
+        <div 
+          className="bg-white border-t-4 border-t-bp-yellow border-x border-b border-slate-100 rounded-2xl p-5 shadow-sm card-hover-effect text-left"
+          title="Inventory Value: Total valuation of current on-hand store inventory (Current Stock × Unit Price)"
+        >
           <div className="flex items-center gap-2 text-slate-400 mb-2">
             <div className="w-7 h-7 rounded-lg bg-yellow-50 flex items-center justify-center text-yellow-600 flex-shrink-0">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M12 16V5" /></svg>
@@ -304,7 +313,10 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
           <p className="text-[10px] text-slate-400 mt-1 font-medium">Stock valuation</p>
         </div>
 
-        <div className="bg-white border-t-4 border-t-rose-500 border-x border-b border-slate-100 rounded-2xl p-5 shadow-sm card-hover-effect text-left">
+        <div 
+          className="bg-white border-t-4 border-t-rose-500 border-x border-b border-slate-100 rounded-2xl p-5 shadow-sm card-hover-effect text-left"
+          title="Critical Stockout: Count of retail stores (or unique products) with a projected stockout date within 7 days"
+        >
           <div className="flex items-center gap-2 mb-2">
             <div className="w-7 h-7 bg-rose-550/10 rounded-lg flex items-center justify-center text-rose-600 flex-shrink-0">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
@@ -315,7 +327,10 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
           <p className="text-[10px] text-slate-400 mt-1 font-medium">{atRiskPct}% of {atRiskLabel} at risk</p>
         </div>
 
-        <div className="bg-white border-t-4 border-t-orange-500 border-x border-b border-slate-100 rounded-2xl p-5 shadow-sm card-hover-effect text-left">
+        <div 
+          className="bg-white border-t-4 border-t-orange-500 border-x border-b border-slate-100 rounded-2xl p-5 shadow-sm card-hover-effect text-left"
+          title="Below Reorder: Total count of store inventory records where current stock level is <= Safety Reorder Level (ROL)"
+        >
           <div className="flex items-center gap-2 mb-2">
             <div className="w-7 h-7 bg-orange-50 rounded-lg flex items-center justify-center text-orange-500 flex-shrink-0">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>
@@ -326,7 +341,10 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
           <p className="text-[10px] text-slate-400 mt-1 font-medium">{belowReorderPct}% SKU reorder limits</p>
         </div>
 
-        <div className={`bg-white border-t-4 ${healthTheme.border} border-x border-b border-slate-100 rounded-2xl p-5 shadow-sm card-hover-effect text-left`}>
+        <div 
+          className={`bg-white border-t-4 ${healthTheme.border} border-x border-b border-slate-100 rounded-2xl p-5 shadow-sm card-hover-effect text-left`}
+          title="Inventory Health: Percentage of active items with > 15 days of projected stock safety remaining"
+        >
           <div className="flex items-center gap-2 mb-2">
             <div className={`w-7 h-7 ${healthTheme.bg} rounded-lg flex items-center justify-center ${healthTheme.text} flex-shrink-0`}>
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -339,7 +357,6 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
 
       </div>
 
-      {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* Stockout Risk Summary Donut */}

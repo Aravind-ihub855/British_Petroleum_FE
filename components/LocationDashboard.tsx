@@ -142,23 +142,38 @@ export default function LocationDashboard({ onNavigate }: LocationDashboardProps
 
       {/* KPI Cards Row */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-5">
-        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-bp-green border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
+        <div 
+          className="bg-white p-5 rounded-2xl border-t-4 border-t-bp-green border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect"
+          title="Total Stores: Total active retail locations managed in this city"
+        >
           <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Total Stores</span>
           <span className="text-3xl font-extrabold tracking-tight text-slate-900 mt-2">{cityMetrics.storesCount}</span>
         </div>
-        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-bp-green border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
+        <div 
+          className="bg-white p-5 rounded-2xl border-t-4 border-t-bp-green border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect"
+          title="Total Products: Total unique SKU item codes carried in stores in this city"
+        >
           <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Total Products</span>
           <span className="text-3xl font-extrabold tracking-tight text-slate-900 mt-2">{cityMetrics.productsCount}</span>
         </div>
-        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-bp-yellow border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
+        <div 
+          className="bg-white p-5 rounded-2xl border-t-4 border-t-bp-yellow border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect"
+          title="Inventory Value: Combined stock valuation across all stores in this city (Stock × Unit Price)"
+        >
           <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Inventory Value</span>
           <span className="text-3xl font-extrabold tracking-tight text-slate-900 mt-2">{cityMetrics.valString}</span>
         </div>
-        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-amber-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
+        <div 
+          className="bg-white p-5 rounded-2xl border-t-4 border-t-rose-600 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect"
+          title="At Risk Items: Combined count of store inventory records currently below their Reorder Level (ROL) in this city"
+        >
           <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">At Risk Items</span>
-          <span className="text-3xl font-extrabold tracking-tight text-slate-900 mt-2">{cityMetrics.atRiskCount}</span>
+          <span className="text-3xl font-extrabold tracking-tight text-rose-600 mt-2">{cityMetrics.atRiskCount}</span>
         </div>
-        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-rose-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect col-span-2 lg:col-span-1">
+        <div 
+          className="bg-white p-5 rounded-2xl border-t-4 border-t-rose-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect col-span-2 lg:col-span-1"
+          title="Stockouts: Combined count of store inventory records with zero safety days remaining in this city"
+        >
           <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Stockouts</span>
           <span className="text-3xl font-extrabold tracking-tight text-rose-600 mt-2">{cityMetrics.stockoutsCount}</span>
         </div>
@@ -173,17 +188,17 @@ export default function LocationDashboard({ onNavigate }: LocationDashboardProps
             <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
               Inventory by City - Product Details
             </h3>
-            <p className="text-[10px] text-slate-400 font-medium mt-0.5">Top stock levels and recommendations</p>
+            {/* <p className="text-[10px] text-slate-400 font-medium mt-0.5">Top stock levels and recommendations</p> */}
           </div>
           <div className="overflow-x-auto max-h-[450px] scrollbar-thin">
             <table className="w-full text-xs text-left">
               <thead className="bg-slate-50/50 text-slate-400 font-extrabold tracking-wider uppercase border-b border-slate-50 sticky top-0 z-10 text-[9.5px]">
                 <tr>
-                  <th className="py-3.5 px-6">Product Name</th>
-                  <th className="py-3.5 px-4 text-center">UOM</th>
-                  <th className="py-3.5 px-4 text-right">Current Stock</th>
-                  <th className="py-3.5 px-4 text-right">ROQ</th>
-                  <th className="py-3.5 px-6 text-center">Stores Risk</th>
+                  <th className="py-3.5 px-6 cursor-help" title="Product name and catalog descriptor">Product Name</th>
+                  <th className="py-3.5 px-4 text-center cursor-help" title="Unit of Measure">UOM</th>
+                  <th className="py-3.5 px-4 text-right cursor-help" title="Total stock units combined across all stores in this city">Current Stock</th>
+                  <th className="py-3.5 px-4 text-right cursor-help" title="Recommended reorder quantity needed for this product">ROQ</th>
+                  <th className="py-3.5 px-6 text-center cursor-help" title="Number of unique stores in this city where this product is currently below ROL">Stores Risk</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100/60 font-semibold text-slate-700">
@@ -199,7 +214,7 @@ export default function LocationDashboard({ onNavigate }: LocationDashboardProps
                     </td>
                     <td className="py-4 px-4 text-center text-slate-400 font-medium border-r border-slate-100">{row.uom}</td>
                     <td className="py-4 px-4 text-right text-slate-600 font-normal border-r border-slate-100">{row.currentStock}</td>
-                    <td className="py-4 px-4 text-right font-bold text-bp-green border-r border-slate-100">{row.roq}</td>
+                    <td className="py-4 px-4 text-right font-bold text-slate-850 border-r border-slate-100">{row.roq}</td>
                     <td className="py-4 px-6 text-center">
                       <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] border ${
                         row.storesAtRisk > 0 ? "text-rose-600 bg-rose-50 border-rose-100" : "text-slate-400 bg-slate-50 border-slate-150"
@@ -225,8 +240,8 @@ export default function LocationDashboard({ onNavigate }: LocationDashboardProps
 
           <div className="flex-grow space-y-5 py-4">
             {storeRiskList.map((store) => {
-              const maxPossibleRisk = 50; // Reference for max bar scaling
-              const barWidth = Math.min(100, (store.highRiskItemsCount / maxPossibleRisk) * 100);
+              const totalItems = store.totalItems || 1;
+              const barWidth = (store.highRiskItemsCount / totalItems) * 100;
               const barColor = store.highRiskItemsCount > 20 
                 ? "bg-rose-500" 
                 : store.highRiskItemsCount > 0 

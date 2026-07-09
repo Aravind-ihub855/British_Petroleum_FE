@@ -28,10 +28,33 @@ export default function ProductDashboard({ onNavigate }: ProductDashboardProps) 
     );
   }
 
+  const TODAY = new Date();
+  TODAY.setHours(0, 0, 0, 0);
+
+  const calcDays = (dateStr: string): number => {
+    const parts = dateStr.split("-");
+    if (parts.length !== 3) return 999;
+    const d = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+    return Math.max(0, Math.round((d.getTime() - TODAY.getTime()) / 86400000));
+  };
+
   const activeProduct = masterProducts.find((p) => p.code === selectedProductCode) || masterProducts[0];
 
   // Scan all stores carrying this product dynamically
-  const carryingStores: { storeId: string; storeName: string; city: string; currentStock: number; avgConsumption: number; predictedStockoutDate: string; roq: number; orderByDate: string; prMrStatus: string; riskLevel: string }[] = [];
+  const carryingStores: { 
+    storeId: string; 
+    storeName: string; 
+    city: string; 
+    currentStock: number; 
+    safetyStockLevel: number;
+    avgConsumption: number; 
+    predictedStockoutDate: string; 
+    roq: number; 
+    orderByDate: string; 
+    prMrStatus: string; 
+    riskLevel: string;
+    leadTimeDays: number;
+  }[] = [];
 
   stores.forEach((st) => {
     const inv = getStoreInventory(st.id);
@@ -42,12 +65,14 @@ export default function ProductDashboard({ onNavigate }: ProductDashboardProps) 
         storeName: st.name,
         city: st.city,
         currentStock: item.currentStock,
+        safetyStockLevel: item.safetyStockLevel,
         avgConsumption: item.avgDailyConsumption,
         predictedStockoutDate: item.predictedStockoutDate,
         roq: item.recommendedRoq,
         orderByDate: item.orderByDate,
         prMrStatus: item.prMrStatus,
-        riskLevel: item.riskLevel
+        riskLevel: item.riskLevel,
+        leadTimeDays: item.leadTimeDays || 3
       });
     }
   });
@@ -91,7 +116,7 @@ export default function ProductDashboard({ onNavigate }: ProductDashboardProps) 
       {/* KPI Cards Row */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-5">
         <div className="bg-white p-5 rounded-2xl border-t-4 border-t-bp-green border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
-          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Stores Carrying</span>
+          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Available In Stores</span>
           <span className="text-3xl font-extrabold tracking-tight text-slate-900 mt-2">{totalCarrying}</span>
         </div>
         <div className="bg-white p-5 rounded-2xl border-t-4 border-t-bp-green border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
@@ -100,12 +125,12 @@ export default function ProductDashboard({ onNavigate }: ProductDashboardProps) 
             {totalStock.toLocaleString()} <span className="text-xs font-bold text-slate-400 ml-0.5">{activeProduct.uom === "Litres" ? "Ltr" : activeProduct.uom === "Kilograms" ? "Kg" : "Pcs"}</span>
           </span>
         </div>
-        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-bp-yellow border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
+        {/* <div className="bg-white p-5 rounded-2xl border-t-4 border-t-bp-yellow border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
           <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Total ROQ</span>
           <span className="text-3xl font-extrabold tracking-tight text-slate-900 mt-2">
             {totalRoq.toLocaleString()} <span className="text-xs font-bold text-slate-400 ml-0.5">{activeProduct.uom === "Litres" ? "Ltr" : activeProduct.uom === "Kilograms" ? "Kg" : "Pcs"}</span>
           </span>
-        </div>
+        </div> */}
         <div className="bg-white p-5 rounded-2xl border-t-4 border-t-rose-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
           <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Stores at Risk</span>
           <span className="text-3xl font-extrabold tracking-tight text-rose-600 mt-2">{storesAtRisk}</span>
@@ -123,7 +148,7 @@ export default function ProductDashboard({ onNavigate }: ProductDashboardProps) 
             <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
               Store-wise Stockout Prediction - {activeProduct.name}
             </h3>
-            <p className="text-[10px] text-slate-400 font-medium mt-0.5">Location inventory levels</p>
+            {/* <p className="text-[10px] text-slate-400 font-medium mt-0.5">Location inventory levels</p> */}
           </div>
           {/* <button
             onClick={() => onNavigate("3", "product_wise", undefined, activeProduct.code)}
@@ -152,6 +177,12 @@ export default function ProductDashboard({ onNavigate }: ProductDashboardProps) 
                 </th>
                 <th className="py-2.5 px-2 border-r border-slate-200 text-center leading-tight">
                   <div className="flex flex-col items-center justify-center">
+                    <span>Safety</span>
+                    <span>Stock</span>
+                  </div>
+                </th>
+                <th className="py-2.5 px-2 border-r border-slate-200 text-center leading-tight">
+                  <div className="flex flex-col items-center justify-center">
                     <span>Avg Daily</span>
                     <span>Consumption</span>
                   </div>
@@ -162,11 +193,16 @@ export default function ProductDashboard({ onNavigate }: ProductDashboardProps) 
                     <span>Date</span>
                   </div>
                 </th>
+                <th className="py-2.5 px-2 border-r border-slate-200 text-center leading-tight">
+                  <div className="flex flex-col items-center justify-center">
+                    <span>Days</span>
+                    <span>Left</span>
+                  </div>
+                </th>
                 <th className="py-2.5 px-2 border-r border-slate-200 text-center">ROQ</th>
                 <th className="py-2.5 px-2 border-r border-slate-200 text-center leading-tight">
                   <div className="flex flex-col items-center justify-center">
-                    <span>Order</span>
-                    <span>Recommendation</span>
+                    <span>Order By</span>
                   </div>
                 </th>
                 <th className="py-2.5 px-2 border-r border-slate-200 text-center">Status</th>
@@ -185,6 +221,15 @@ export default function ProductDashboard({ onNavigate }: ProductDashboardProps) 
                     ? "text-rose-600 bg-rose-50 border-rose-100"
                     : "text-slate-600 bg-slate-50 border-slate-200";
 
+                const daysLeft = calcDays(row.predictedStockoutDate);
+
+                const orderParts = row.orderByDate.split("-");
+                const orderDate = orderParts.length === 3
+                  ? new Date(parseInt(orderParts[2]), parseInt(orderParts[1]) - 1, parseInt(orderParts[0]))
+                  : null;
+                const orderDiff = orderDate ? Math.round((orderDate.getTime() - TODAY.getTime()) / 86400000) : 999;
+                const isOverdue = orderDiff < 0;
+
                 return (
                   <tr key={idx} className="hover:bg-slate-50/50 transition duration-75">
                     <td className="py-2.5 px-3 font-bold text-slate-800 hover:text-bp-green cursor-pointer border-r border-slate-100 text-center"
@@ -195,14 +240,46 @@ export default function ProductDashboard({ onNavigate }: ProductDashboardProps) 
                     <td className="py-2.5 px-2 text-slate-700 font-bold border-r border-slate-100 text-center">{row.storeName}</td>
                     <td className="py-2.5 px-2 text-slate-500 font-medium border-r border-slate-100 text-center">{row.city}</td>
                     <td className="py-2.5 px-2 text-center text-slate-700 font-normal border-r border-slate-100">{row.currentStock}</td>
+                    <td className="py-2.5 px-2 text-center text-slate-500 font-medium border-r border-slate-100">{row.safetyStockLevel}</td>
                     <td className="py-2.5 px-2 text-center text-slate-500 font-medium border-r border-slate-100">{row.avgConsumption}</td>
                     <td className="py-2.5 px-2 text-center border-r border-slate-100">
                       <div className="font-bold text-slate-800 whitespace-nowrap">
-                        {row.predictedStockoutDate}
+                        {(() => {
+                          const parts = row.predictedStockoutDate.split("-");
+                          if (parts.length !== 3) return row.predictedStockoutDate;
+                          const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                          const mName = months[parseInt(parts[1]) - 1] || "";
+                          return `${parts[0]} ${mName} ${parts[2]}`;
+                        })()}
                       </div>
                     </td>
-                    <td className="py-2.5 px-2 text-center font-bold text-slate-800 border-r border-slate-100">{row.roq}</td>
-                    <td className="py-2.5 px-2 text-center font-bold text-slate-800 border-r border-slate-100 whitespace-nowrap">{row.orderByDate}</td>
+                    <td className="py-2.5 px-2 text-center border-r border-slate-100">
+                      <div className="font-extrabold text-sm text-slate-800">{daysLeft}</div>
+                      <div className="text-[9px] text-slate-400 font-medium mt-0.5 whitespace-nowrap">
+                        {daysLeft === 1 || daysLeft === 0 ? "day" : "days"} left
+                      </div>
+                    </td>
+                    <td className="py-2.5 px-2 text-center font-bold text-slate-850 border-r border-slate-100">{row.roq}</td>
+                    <td className="py-2.5 px-2 text-center border-r border-slate-100">
+                      <div className="flex flex-col items-center justify-center">
+                        <div className="font-bold text-slate-800 whitespace-nowrap">
+                          {(() => {
+                            const parts = row.orderByDate.split("-");
+                            if (parts.length !== 3) return row.orderByDate;
+                            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                            const mName = months[parseInt(parts[1]) - 1] || "";
+                            return `${parts[0]} ${mName} ${parts[2]}`;
+                          })()}
+                        </div>
+                        <div className="text-[8.5px] mt-0.5 whitespace-nowrap">
+                          {isOverdue ? (
+                            <span className="text-rose-600 font-bold uppercase tracking-wide">Overdue</span>
+                          ) : (
+                            <span className="text-slate-400 font-medium">({row.leadTimeDays} {row.leadTimeDays === 1 ? "day" : "days"} before stock out)</span>
+                          )}
+                        </div>
+                      </div>
+                    </td>
                     <td className="py-2.5 px-2 text-center border-r border-slate-100">
                       <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold border bg-slate-50 text-slate-600 border-slate-200">
                         {row.prMrStatus}

@@ -203,22 +203,34 @@ export default function InventoryAnalysis() {
 
         {/* KPI Cards Grid (Left side, takes 8 cols) */}
         <div className="lg:col-span-7 xl:col-span-8 grid grid-cols-2 gap-5">
-          <div className="bg-white p-5 rounded-2xl border-t-4 border-t-bp-green border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
+          <div 
+            className="bg-white p-5 rounded-2xl border-t-4 border-t-bp-green border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect"
+            title="Fast Moving (F): SKUs with an average daily sales volume >= 25.0 units/day"
+          >
             <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Fast Moving (F)</span>
             <span className="text-3xl font-extrabold tracking-tight text-bp-green mt-2">{fastItemsCount} SKUs</span>
             <p className="text-[9.5px] text-slate-400 font-bold mt-1.5 uppercase tracking-wide">High velocity items</p>
           </div>
-          <div className="bg-white p-5 rounded-2xl border-t-4 border-t-amber-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
+          <div 
+            className="bg-white p-5 rounded-2xl border-t-4 border-t-amber-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect"
+            title="Slow Moving (S): SKUs with an average daily sales volume between 5.0 and 25.0 units/day"
+          >
             <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Slow Moving (S)</span>
             <span className="text-3xl font-extrabold tracking-tight text-amber-500 mt-2">{slowItemsCount} SKUs</span>
             <p className="text-[9.5px] text-slate-400 font-bold mt-1.5 uppercase tracking-wide">Moderate velocity items</p>
           </div>
-          <div className="bg-white p-5 rounded-2xl border-t-4 border-t-rose-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
+          <div 
+            className="bg-white p-5 rounded-2xl border-t-4 border-t-rose-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect"
+            title="Non Moving (N): SKUs with stagnant velocity of < 5.0 units/day"
+          >
             <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Non Moving (N)</span>
             <span className="text-3xl font-extrabold tracking-tight text-rose-600 mt-2">{nonMovingItemsCount} SKUs</span>
             <p className="text-[9.5px] text-slate-400 font-bold mt-1.5 uppercase tracking-wide">Stagnant inventory items</p>
           </div>
-          <div className="bg-white p-5 rounded-2xl border-t-4 border-t-slate-300 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
+          <div 
+            className="bg-white p-5 rounded-2xl border-t-4 border-t-slate-300 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect"
+            title="Total SKUs Checked: Total unique items stocked at the filtered store(s)"
+          >
             <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Total SKUs Checked</span>
             <span className="text-3xl font-extrabold tracking-tight text-slate-900 mt-2">{totalSKUs}</span>
             <p className="text-[9.5px] text-slate-400 font-bold mt-1.5 uppercase tracking-wide">Total unique items monitored</p>
@@ -303,11 +315,11 @@ export default function InventoryAnalysis() {
             <table className="w-full text-[11px] text-left">
               <thead className="bg-slate-50/50 text-slate-500 tracking-wider font-semibold border-b border-slate-100 sticky top-0 z-10 text-[9.5px]">
                 <tr>
-                  <th className="py-3 px-4 font-bold border-r border-slate-100">Product</th>
-                  <th className="py-3 px-3 text-center font-bold border-r border-slate-100">UOM</th>
-                  <th className="py-3 px-3 text-right font-bold border-r border-slate-100">Total Stock</th>
-                  <th className="py-3 px-3 text-right font-bold border-r border-slate-100">Max Sales/Day</th>
-                  <th className="py-3 px-4 text-center font-bold">Velocity</th>
+                  <th className="py-3 px-4 font-bold border-r border-slate-100 cursor-help" title="Product SKU catalog name">Product</th>
+                  <th className="py-3 px-3 text-center font-bold border-r border-slate-100 cursor-help" title="Unit of Measure">UOM</th>
+                  <th className="py-3 px-3 text-right font-bold border-r border-slate-100 cursor-help" title="Aggregate physical inventory currently in stock across filtered stores">Total Stock</th>
+                  <th className="py-3 px-3 text-right font-bold border-r border-slate-100 cursor-help" title="Peak historical daily unit consumption recorded for this item">Max Sales/Day</th>
+                  <th className="py-3 px-4 text-center font-bold cursor-help" title="FSN Classification rating based on average daily velocity">Velocity</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
@@ -348,11 +360,11 @@ export default function InventoryAnalysis() {
               </colgroup>
               <thead className="bg-slate-50/50 text-slate-500 tracking-wider font-semibold border-b border-slate-100 sticky top-0 z-10 text-[9.5px]">
                 <tr>
-                  <th className="py-3 px-3 font-bold border-r border-slate-100">Product</th>
-                  <th className="py-3 px-2 text-center font-bold border-r border-slate-100 whitespace-nowrap">UOM</th>
-                  <th className="py-3 px-2 text-right font-bold border-r border-slate-100">Total Stock</th>
-                  <th className="py-3 px-2 text-center font-bold border-r border-slate-100 whitespace-nowrap">Last Sale</th>
-                  <th className="py-3 px-2 text-center font-bold whitespace-nowrap">Days Idle</th>
+                  <th className="py-3 px-3 font-bold border-r border-slate-100 cursor-help" title="Product SKU catalog name">Product</th>
+                  <th className="py-3 px-2 text-center font-bold border-r border-slate-100 whitespace-nowrap cursor-help" title="Unit of Measure">UOM</th>
+                  <th className="py-3 px-2 text-right font-bold border-r border-slate-100 cursor-help" title="Aggregate physical inventory currently in stock across filtered stores">Total Stock</th>
+                  <th className="py-3 px-2 text-center font-bold border-r border-slate-100 whitespace-nowrap cursor-help" title="Estimated calendar date of the last registered customer transaction">Last Sale</th>
+                  <th className="py-3 px-2 text-center font-bold whitespace-nowrap cursor-help" title="Total consecutive days this product has remained in inventory without registering a sale">Days Idle</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
