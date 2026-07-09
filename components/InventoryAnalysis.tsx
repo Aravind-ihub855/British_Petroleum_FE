@@ -36,13 +36,14 @@ export default function InventoryAnalysis() {
     : stores;
 
   // Dynamically compute FSN categories based on actual sales volumes
-  const allStoreItemsMap: Record<string, { name: string; uom: string; stock: number; maxConsumption: number }> = {};
+  const allStoreItemsMap: Record<string, { name: string; uom: string; stock: number; totalConsumption: number; storeCount: number }> = {};
   masterProducts.forEach((p) => {
     allStoreItemsMap[p.code] = {
       name: p.name,
       uom: p.uom,
       stock: 0,
-      maxConsumption: 0
+      totalConsumption: 0,
+      storeCount: 0
     };
   });
 
@@ -51,23 +52,31 @@ export default function InventoryAnalysis() {
     inv.forEach((item) => {
       if (allStoreItemsMap[item.code]) {
         allStoreItemsMap[item.code].stock += item.currentStock;
-        if (item.avgDailyConsumption > allStoreItemsMap[item.code].maxConsumption) {
-          allStoreItemsMap[item.code].maxConsumption = item.avgDailyConsumption;
-        }
+        allStoreItemsMap[item.code].totalConsumption += item.avgDailyConsumption;
+        allStoreItemsMap[item.code].storeCount++;
       }
     });
   });
 
-  const uniqueItemsList = Object.values(allStoreItemsMap);
+  const uniqueItemsList = Object.values(allStoreItemsMap).map((item) => {
+    const avgConsumption = item.storeCount > 0 ? item.totalConsumption / item.storeCount : 0;
+    return {
+      name: item.name,
+      uom: item.uom,
+      stock: item.stock,
+      avgConsumption
+    };
+  });
+
   const totalSKUs = masterProducts.length;
 
   // Classify products:
-  // Fast (F): Max daily consumption >= 25.0
-  // Slow (S): Max daily consumption >= 5.0 and < 25.0
-  // Non-Moving (N): Max daily consumption < 5.0
-  const fastItemsCount = uniqueItemsList.filter((item) => item.maxConsumption >= 25.0).length;
-  const slowItemsCount = uniqueItemsList.filter((item) => item.maxConsumption >= 5.0 && item.maxConsumption < 25.0).length;
-  const nonMovingItemsCount = uniqueItemsList.filter((item) => item.maxConsumption < 5.0).length;
+  // Fast (F): Avg daily consumption >= 25.0
+  // Slow (S): Avg daily consumption >= 5.0 and < 25.0
+  // Non-Moving (N): Avg daily consumption < 5.0
+  const fastItemsCount = uniqueItemsList.filter((item) => item.avgConsumption >= 25.0).length;
+  const slowItemsCount = uniqueItemsList.filter((item) => item.avgConsumption >= 5.0 && item.avgConsumption < 25.0).length;
+  const nonMovingItemsCount = uniqueItemsList.filter((item) => item.avgConsumption < 5.0).length;
 
   const fastPercent = totalSKUs > 0 ? Math.round((fastItemsCount / totalSKUs) * 100) : 0;
   const slowPercent = totalSKUs > 0 ? Math.round((slowItemsCount / totalSKUs) * 100) : 0;
@@ -75,9 +84,9 @@ export default function InventoryAnalysis() {
 
   // Build top 5 non-moving products from dynamic dataset
   const nonMovingItems: NonMovingRow[] = uniqueItemsList
-    .filter((item) => item.maxConsumption < 5.0 && item.stock > 0)
+    .filter((item) => item.avgConsumption < 5.0 && item.stock > 0)
     .map((item, idx) => {
-      // Deterministic dates based on code string
+      // Deterministic dates based on name/index
       const days = 100 + (idx * 17) % 80;
       const lastSaleDate = new Date();
       lastSaleDate.setDate(lastSaleDate.getDate() - days);
@@ -97,12 +106,12 @@ export default function InventoryAnalysis() {
 
   // Build top 5 fast-moving products from dynamic dataset
   const fastMovingItems = uniqueItemsList
-    .filter((item) => item.maxConsumption >= 25.0 && item.stock > 0)
+    .filter((item) => item.avgConsumption >= 25.0 && item.stock > 0)
     .map((item) => ({
       product: item.name,
       uom: item.uom,
       totalStock: item.stock,
-      maxConsumption: item.maxConsumption
+      maxConsumption: item.avgConsumption
     }))
     .sort((a, b) => b.maxConsumption - a.maxConsumption)
     .slice(0, 5);

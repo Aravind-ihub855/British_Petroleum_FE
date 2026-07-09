@@ -125,12 +125,12 @@ export default function ProductDashboard({ onNavigate }: ProductDashboardProps) 
             </h3>
             <p className="text-[10px] text-slate-400 font-medium mt-0.5">Location inventory levels and direct sourcing shortcut options</p>
           </div>
-          <button
+          {/* <button
             onClick={() => onNavigate("3", "product_wise", undefined, activeProduct.code)}
             className="text-xs font-extrabold text-bp-green hover:text-bp-green-dark"
           >
             Analyze Sourcing Vendors
-          </button>
+          </button> */}
         </div>
         <div className="overflow-x-auto max-h-[450px] scrollbar-thin">
           <table className="w-full text-[11px] text-left">
@@ -226,11 +226,11 @@ export default function ProductDashboard({ onNavigate }: ProductDashboardProps) 
 
         {/* View All Stores trigger bar */}
         <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-end text-xs font-bold text-bp-green">
-          <button className="hover:text-bp-green-dark transition duration-150 cursor-pointer"
+          {/* <button className="hover:text-bp-green-dark transition duration-150 cursor-pointer"
             onClick={() => onNavigate("2", "store", undefined, undefined)}
           >
             View All Stores
-          </button>
+          </button> */}
         </div>
       </div>
 

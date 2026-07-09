@@ -232,6 +232,18 @@ export default function Home() {
               {/* Horizontal sub-tabs selector (first store, second location, third product) */}
               {user.role !== "store manager" && (
                 <div className="flex bg-slate-100/80 p-1 rounded-xl w-fit gap-1 border border-slate-200/40">
+                                    <button
+                    onClick={() => setSubTab("location")}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition duration-150 ${
+                      subTab === "location"
+                        ? "bg-white text-slate-900 shadow-sm border border-slate-200/20"
+                        : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    Location Dashboard
+                  </button>
+                  
+                  
                   <button
                     onClick={() => setSubTab("store")}
                     className={`px-4 py-2 rounded-lg text-xs font-bold transition duration-150 ${
@@ -242,16 +254,7 @@ export default function Home() {
                   >
                     Store Dashboard
                   </button>
-                  <button
-                    onClick={() => setSubTab("location")}
-                    className={`px-4 py-2 rounded-lg text-xs font-bold transition duration-150 ${
-                      subTab === "location"
-                        ? "bg-white text-slate-900 shadow-sm border border-slate-200/20"
-                        : "text-slate-500 hover:text-slate-800"
-                    }`}
-                  >
-                    Location Dashboard
-                  </button>
+
                   <button
                     onClick={() => setSubTab("product")}
                     className={`px-4 py-2 rounded-lg text-xs font-bold transition duration-150 ${
@@ -283,7 +286,7 @@ export default function Home() {
                     }}
                   />
                 ) : subTab === "location" ? (
-                  <LocationDashboard />
+                  <LocationDashboard onNavigate={handleCrossNavigate} />
                 ) : (
                   <ProductDashboard onNavigate={handleCrossNavigate} />
                 )}

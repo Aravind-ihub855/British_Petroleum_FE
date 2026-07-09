@@ -542,8 +542,14 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
               Low (&gt; 15 Days)
             </span>
           </div>
-          <div className="text-slate-400">
-            <span className="font-extrabold text-slate-500">PR:</span> Purchase Required | <span className="font-extrabold text-slate-500">MR:</span> Monitor &amp; Reorder
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 text-slate-455">
+            <div className="text-slate-400">
+              <span className="font-extrabold text-slate-500">PR:</span> Purchase Required | <span className="font-extrabold text-slate-500">MR:</span> Monitor &amp; Reorder
+            </div>
+            <div className="h-3.5 w-px bg-slate-200 hidden sm:block" />
+            <div className="text-slate-600 bg-slate-100 px-2 py-0.5 rounded font-extrabold">
+              Showing {sortedFilteredInventory.length} of {inventory.length} products
+            </div>
           </div>
         </div>
       </div>

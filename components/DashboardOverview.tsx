@@ -60,9 +60,9 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
   let pendingPrValue = 0;
   let healthyCount = 0;
 
-  const productAggregates: Record<string, { riskLevel: "High" | "Medium" | "Low"; maxConsumption: number; category: string; daysToStockout: number }> = {};
+  const productAggregates: Record<string, { riskLevel: "High" | "Medium" | "Low"; totalConsumption: number; storeCount: number; category: string; daysToStockout: number }> = {};
   masterProducts.forEach((p) => {
-    productAggregates[p.code] = { riskLevel: "Low", maxConsumption: 0, category: p.category, daysToStockout: 999 };
+    productAggregates[p.code] = { riskLevel: "Low", totalConsumption: 0, storeCount: 0, category: p.category, daysToStockout: 999 };
   });
 
   const allItems: Array<{
@@ -97,7 +97,8 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
 
       const pInfo = productAggregates[item.code];
       if (pInfo) {
-        if (item.avgDailyConsumption > pInfo.maxConsumption) pInfo.maxConsumption = item.avgDailyConsumption;
+        pInfo.totalConsumption += item.avgDailyConsumption;
+        pInfo.storeCount++;
         // Upgrade risk level using recalculated value (consistent across all charts)
         if (recalcRisk === "High") pInfo.riskLevel = "High";
         else if (recalcRisk === "Medium" && pInfo.riskLevel !== "High") pInfo.riskLevel = "Medium";
@@ -145,14 +146,17 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
   const atRiskLabel = isStoreManager ? "products" : "stores";
   const belowReorderPct = totalSeededSKUsCount > 0 ? Math.round((belowReorderCount / totalSeededSKUsCount) * 100) : 0;
 
-  const productList = Object.values(productAggregates);
+  const productList = Object.values(productAggregates).map((p) => {
+    const avgConsumption = p.storeCount > 0 ? p.totalConsumption / p.storeCount : 0;
+    return { ...p, avgConsumption };
+  });
   const totalUniqueProducts = productList.length || 1;
   const highRiskProductCount = productList.filter((p) => p.riskLevel === "High").length;
   const mediumRiskProductCount = productList.filter((p) => p.riskLevel === "Medium").length;
   const lowRiskProductCount = productList.filter((p) => p.riskLevel === "Low").length;
-  const fastMovingProductCount = productList.filter((p) => p.maxConsumption >= 25.0).length;
-  const slowMovingProductCount = productList.filter((p) => p.maxConsumption >= 5.0 && p.maxConsumption < 25.0).length;
-  const nonMovingProductCount = productList.filter((p) => p.maxConsumption < 5.0).length;
+  const fastMovingProductCount = productList.filter((p) => p.avgConsumption >= 25.0).length;
+  const slowMovingProductCount = productList.filter((p) => p.avgConsumption >= 5.0 && p.avgConsumption < 25.0).length;
+  const nonMovingProductCount = productList.filter((p) => p.avgConsumption < 5.0).length;
   const fastPercent = Math.round((fastMovingProductCount / totalUniqueProducts) * 100);
   const slowPercent = Math.round((slowMovingProductCount / totalUniqueProducts) * 100);
   const nonPercent = 100 - fastPercent - slowPercent;

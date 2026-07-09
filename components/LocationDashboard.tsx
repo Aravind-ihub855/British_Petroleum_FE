@@ -1,9 +1,8 @@
-"use client";
-
 import React, { useState, useEffect } from "react";
 import { useData } from "@/context/DataContext";
 
 interface CityProductRow {
+  productCode: string;
   product: string;
   uom: string;
   currentStock: string;
@@ -11,7 +10,11 @@ interface CityProductRow {
   storesAtRisk: number;
 }
 
-export default function LocationDashboard() {
+interface LocationDashboardProps {
+  onNavigate: (tabId: string, subTabId: string, vendorName?: string, productCode?: string) => void;
+}
+
+export default function LocationDashboard({ onNavigate }: LocationDashboardProps) {
   const { stores, getStoreInventory, getLocationInventory, loading } = useData();
   const [selectedCity, setSelectedCity] = useState("");
 
@@ -46,13 +49,14 @@ export default function LocationDashboard() {
   const cityStores = stores.filter((s) => s.city.toLowerCase() === selectedCity.toLowerCase());
   
   // Aggregate products stock across all stores in the city
-  const productAggMap: Record<string, { name: string; uom: string; stock: number; roq: number; riskStores: number }> = {};
+  const productAggMap: Record<string, { code: string; name: string; uom: string; stock: number; roq: number; riskStores: number }> = {};
 
   cityStores.forEach((st) => {
     const inv = getStoreInventory(st.id);
     inv.forEach((item) => {
       if (!productAggMap[item.code]) {
         productAggMap[item.code] = {
+          code: item.code,
           name: item.name,
           uom: item.uom,
           stock: 0,
@@ -70,6 +74,7 @@ export default function LocationDashboard() {
 
   const aggregateRows: CityProductRow[] = Object.values(productAggMap)
     .map((p) => ({
+      productCode: p.code,
       product: p.name,
       uom: p.uom,
       currentStock: p.stock.toLocaleString(),
@@ -78,14 +83,34 @@ export default function LocationDashboard() {
     }))
     .slice(0, 8); // Display top 8 items for a clean layout
 
-  // Calculate percentages for the circular donut chart
-  const totalStores = cityStores.length;
-  const highRiskStores = cityMetrics.atRiskCount;
-  
-  // Deterministic splits for high-fidelity rendering
-  const lowRiskStores = Math.max(0, totalStores - highRiskStores);
-  const highPercent = totalStores > 0 ? Math.round((highRiskStores / totalStores) * 100) : 0;
-  const lowPercent = totalStores > 0 ? 100 - highPercent : 0;
+  // Calculate store-wise risk counts using real today's date calculations
+  const TODAY = new Date();
+  TODAY.setHours(0, 0, 0, 0);
+
+  const calcDays = (dateStr: string): number => {
+    const parts = dateStr.split("-");
+    if (parts.length !== 3) return 999;
+    const d = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+    return Math.max(0, Math.round((d.getTime() - TODAY.getTime()) / 86400000));
+  };
+
+  const calcRisk = (days: number): "High" | "Medium" | "Low" => {
+    if (days <= 7) return "High";
+    if (days <= 15) return "Medium";
+    return "Low";
+  };
+
+  const storeRiskList = cityStores.map((st) => {
+    const inv = getStoreInventory(st.id);
+    const totalItems = inv.length;
+    const highRiskItemsCount = inv.filter((item) => calcRisk(calcDays(item.predictedStockoutDate)) === "High").length;
+    return {
+      id: st.id,
+      name: st.name,
+      totalItems,
+      highRiskItemsCount,
+    };
+  }).sort((a, b) => b.highRiskItemsCount - a.highRiskItemsCount);
 
   return (
     <div className="space-y-8 animate-fadeIn">
@@ -139,7 +164,7 @@ export default function LocationDashboard() {
         </div>
       </div>
 
-      {/* Split view: Products Table left, Donut Chart right */}
+      {/* Split view: Products Table left, Store Progress List right */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Top Products Table (Left Column) */}
@@ -164,10 +189,17 @@ export default function LocationDashboard() {
               <tbody className="divide-y divide-slate-100/60 font-semibold text-slate-700">
                 {aggregateRows.map((row, idx) => (
                   <tr key={idx} className="hover:bg-slate-50/50 transition duration-75">
-                    <td className="py-4 px-6 font-bold text-slate-900">{row.product}</td>
-                    <td className="py-4 px-4 text-center text-slate-400 font-medium">{row.uom}</td>
-                    <td className="py-4 px-4 text-right text-slate-655 font-normal">{row.currentStock}</td>
-                    <td className="py-4 px-4 text-right font-bold text-bp-green">{row.roq}</td>
+                    <td className="py-4 px-6 border-r border-slate-100">
+                      <div
+                        onClick={() => onNavigate("2", "location", undefined, row.productCode)}
+                        className="font-bold text-slate-900 hover:text-bp-green cursor-pointer leading-tight"
+                      >
+                        {row.product}
+                      </div>
+                    </td>
+                    <td className="py-4 px-4 text-center text-slate-400 font-medium border-r border-slate-100">{row.uom}</td>
+                    <td className="py-4 px-4 text-right text-slate-600 font-normal border-r border-slate-100">{row.currentStock}</td>
+                    <td className="py-4 px-4 text-right font-bold text-bp-green border-r border-slate-100">{row.roq}</td>
                     <td className="py-4 px-6 text-center">
                       <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] border ${
                         row.storesAtRisk > 0 ? "text-rose-600 bg-rose-50 border-rose-100" : "text-slate-400 bg-slate-50 border-slate-150"
@@ -182,74 +214,55 @@ export default function LocationDashboard() {
           </div>
         </div>
 
-        {/* Risk summary chart (Right Column) */}
+        {/* Store-wise Risk progress bars (Right Column) */}
         <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 flex flex-col justify-between text-left lg:col-span-5 card-hover-effect">
           <div className="border-b border-slate-50 pb-3.5 mb-4">
             <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
               Store Risk Summary by City
             </h3>
-            <p className="text-[10px] text-slate-400 font-medium mt-0.5">Depletion threat segmentation</p>
+            <p className="text-[10px] text-slate-400 font-medium mt-0.5">High-risk products count per outlet</p>
           </div>
 
-          <div className="flex-grow flex items-center justify-around py-6 flex-wrap gap-4">
-            <div className="relative w-36 h-36 flex items-center justify-center">
-              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                <circle cx="18" cy="18" r="15.915" fill="none" stroke="#f8fafc" strokeWidth="4.5" />
-                {/* Low Risk Segment (Green) */}
-                <circle
-                  cx="18"
-                  cy="18"
-                  r="15.915"
-                  fill="none"
-                  stroke="#008751"
-                  strokeWidth="4.5"
-                  strokeDasharray={`${lowPercent} 100`}
-                  strokeDashoffset="0"
-                  strokeLinecap="round"
-                />
-                {/* High Risk Segment (Red) */}
-                <circle
-                  cx="18"
-                  cy="18"
-                  r="15.915"
-                  fill="none"
-                  stroke="#ef4444"
-                  strokeWidth="4.5"
-                  strokeDasharray={`${highPercent} 100`}
-                  strokeDashoffset={`-${lowPercent}`}
-                  strokeLinecap="round"
-                />
-              </svg>
-              {/* Centered statistics circle */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center bg-white rounded-full m-5.5 shadow-sm border border-slate-100/60">
-                <span className="text-2xl font-extrabold text-slate-900 leading-none">{totalStores}</span>
-                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider mt-1.5">Outlets</span>
-              </div>
-            </div>
+          <div className="flex-grow space-y-5 py-4">
+            {storeRiskList.map((store) => {
+              const maxPossibleRisk = 50; // Reference for max bar scaling
+              const barWidth = Math.min(100, (store.highRiskItemsCount / maxPossibleRisk) * 100);
+              const barColor = store.highRiskItemsCount > 20 
+                ? "bg-rose-500" 
+                : store.highRiskItemsCount > 0 
+                ? "bg-amber-500" 
+                : "bg-emerald-500";
 
-            <div className="flex flex-col gap-3 font-semibold text-xs text-slate-600">
-              <div className="flex items-center gap-2 hover:bg-slate-50 px-1.5 py-0.5 rounded">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 flex-shrink-0" />
-                <span className="text-slate-500 font-bold uppercase text-[9px] tracking-wide">High Risk Stores</span>
-                <span className="font-extrabold text-slate-950 ml-1">{highRiskStores}</span>
-                <span className="text-slate-400 text-[10px] font-normal">({highPercent}%)</span>
-              </div>
-              <div className="flex items-center gap-2 hover:bg-slate-50 px-1.5 py-0.5 rounded">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#008751] flex-shrink-0" />
-                <span className="text-slate-500 font-bold uppercase text-[9px] tracking-wide">Low Risk Stores</span>
-                <span className="font-extrabold text-slate-950 ml-1">{lowRiskStores}</span>
-                <span className="text-slate-400 text-[10px] font-normal">({lowPercent}%)</span>
-              </div>
-            </div>
+              return (
+                <div key={store.id} className="space-y-1.5">
+                  <div className="flex justify-between items-end text-xs">
+                    <div>
+                      <span className="font-bold text-slate-900">{store.name}</span>
+                      <span className="text-[10px] text-slate-400 font-bold ml-1.5">({store.id})</span>
+                    </div>
+                    <div className="text-[11px] font-extrabold text-slate-800">
+                      <span className={store.highRiskItemsCount > 0 ? "text-rose-600" : "text-emerald-600"}>
+                        {store.highRiskItemsCount}
+                      </span>
+                      <span className="text-slate-400 font-normal text-[10px]"> / {store.totalItems} SKUs</span>
+                    </div>
+                  </div>
+                  <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full rounded-full transition-all duration-500 ${barColor}`} 
+                      style={{ width: `${Math.max(3, barWidth)}%` }} 
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           <div className="pt-4 border-t border-slate-50 text-center font-bold text-slate-700 text-xs mt-3">
             Total At Risk Products in {selectedCity}: <span className="text-rose-600 font-extrabold">{cityMetrics.atRiskCount}</span>
           </div>
         </div>
-
       </div>
-
     </div>
   );
 }
