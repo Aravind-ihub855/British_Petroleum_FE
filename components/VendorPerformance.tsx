@@ -1215,16 +1215,11 @@ export default function VendorPerformance({
                       </div>
                     </th>
                     <th className="py-2.5 px-1.5 border-r border-slate-200 text-center">MOQ</th>
-                    <th className="py-2.5 px-2 text-center leading-tight">
-                      <div className="flex flex-col items-center justify-center">
-                        <span>Performance</span>
-                        <span>Score</span>
-                      </div>
-                    </th>
+  
                     <th className="py-2.5 px-2 text-center leading-tight border-l border-slate-200 bg-emerald-50/30">
                       <div className="flex flex-col items-center justify-center">
                         <span>Organisation</span>
-                        <span>Weighted</span>
+                        <span>Weighted Score</span>
                       </div>
                     </th>
                   </tr>
@@ -1233,6 +1228,7 @@ export default function VendorPerformance({
                   {productVendors.map((row, idx) => {
                     const priceDiff = row.unitCost - activeProduct.unitPrice;
                     const priceDiffPct = Math.round((priceDiff / activeProduct.unitPrice) * 100);
+                    const isRecommended = bestValueVendor && row.vendorId === bestValueVendor.vendorId;
 
                     return (
                       <tr key={idx} className="hover:bg-slate-50/50 transition duration-75">
@@ -1253,10 +1249,12 @@ export default function VendorPerformance({
                         <td className="py-2.5 px-1.5 text-center text-slate-700 border-r border-slate-100">{row.onTimePercent}%</td>
                         <td className="py-2.5 px-1.5 text-center text-slate-700 border-r border-slate-100">{row.rejectionRate}%</td>
                         <td className="py-2.5 px-1.5 text-center text-slate-700 border-r border-slate-100">{row.moq} units</td>
-                        <td className="py-2.5 px-2 text-center text-slate-700 font-extrabold">
+                        {/* <td className="py-2.5 px-2 text-center text-slate-700 font-extrabold">
                           {row.performanceScore.toFixed(1)}
-                        </td>
-                        <td className="py-2.5 px-2 text-center text-emerald-700 font-extrabold border-l border-slate-100 bg-emerald-50/30">
+                        </td> */}
+                        <td className={`py-2.5 px-2 text-center font-extrabold border-l border-slate-100 ${
+                          isRecommended ? "text-emerald-700 bg-emerald-50/30" : "text-slate-700"
+                        }`}>
                           {row.weightedScore.toFixed(1)}
                         </td>
                       </tr>
