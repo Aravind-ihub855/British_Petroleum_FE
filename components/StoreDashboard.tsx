@@ -110,23 +110,6 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
     const catShort = item.category === "Automotive" ? "Auto" : item.category;
     overdueByCategory[catShort] = (overdueByCategory[catShort] || 0) + 1;
   });
-  const overdueCategorySummary = Object.entries(overdueByCategory)
-    .map(([cat, count]) => `${cat}: ${count}`)
-    .join(" | ");
-
-  // Compile detailed multiline tooltip content
-  const overdueTooltip = [
-    `Overdue Orders: ${overdueOrdersCount} products past reorder deadline.`,
-    `\nBreakdown by Category:`,
-    ...Object.entries(overdueByCategory).map(([cat, count]) => `• ${cat}: ${count} ${count === 1 ? 'item' : 'items'}`),
-    `\nTop Overdue Products:`,
-    ...overdueOrders.slice(0, 5).map((item, idx) => {
-      const parts = item.orderByDate.split("-");
-      const orderDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-      const diffDays = Math.round((TODAY.getTime() - orderDate.getTime()) / 86400000);
-      return `${idx + 1}. ${item.name} (${diffDays}d overdue)`;
-    })
-  ].join("\n");
 
   const getFsnCategory = (avgDaily: number): "Fast Moving" | "Slow Moving" | "Non Moving" => {
     if (avgDaily >= 25.0) return "Fast Moving";
@@ -278,12 +261,11 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
         </div>
         <div 
           className="bg-white p-5 rounded-2xl border-t-4 border-t-rose-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect"
-          title={overdueTooltip}
+          title="Overdue Orders Formula: Order By Date < Today"
         >
           <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Overdue Orders</span>
           <span className="text-3xl font-extrabold tracking-tight text-rose-600 mt-2">{overdueOrdersCount}</span>
           <p className="text-[9.5px] text-slate-400 font-bold mt-1.5 uppercase tracking-wide">Orders past deadline</p>
-
         </div>
       </div>
 

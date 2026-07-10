@@ -135,12 +135,25 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     let stockoutsCount = 0;
     const uniqueProducts = new Set<string>();
 
+    const TODAY = new Date();
+    TODAY.setHours(0, 0, 0, 0);
+
+    const calcDays = (dateStr: string): number => {
+      const parts = dateStr.split("-");
+      if (parts.length !== 3) return 999;
+      const d = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+      return Math.max(0, Math.round((d.getTime() - TODAY.getTime()) / 86400000));
+    };
+
     cityStores.forEach((st) => {
       const inv = getStoreInventory(st.id);
       inv.forEach((item) => {
         totalStockValue += item.currentStock * item.unitPrice;
         uniqueProducts.add(item.code);
-        if (item.riskLevel === "High") {
+        
+        // Calculate dynamic risk level based on actual calendar today (matching progress bars)
+        const days = calcDays(item.predictedStockoutDate);
+        if (days <= 7) {
           atRiskCount++;
         }
         if (item.currentStock <= item.rol) {

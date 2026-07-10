@@ -14,7 +14,7 @@ const getSeedHash = (str: string): number => {
 
 export function calculateVendorPerformanceMetrics(vendors: Vendor[], masterProducts: Product[]): VendorECOT[] {
   if (!vendors.length || !masterProducts.length) return [];
-  
+
   const performanceLogs: VendorECOT[] = [];
 
   vendors.forEach((vendor, index) => {
@@ -51,27 +51,27 @@ export function generateDBProcurementData(stores: Store[], vendors: Vendor[]) {
   }
 
   const statuses = ["Pending Approval", "Pending Review", "Returned", "Approved", "In Transit", "Delivered", "Delivered", "Delivered", "Delayed", "Cancelled"];
-  
+
   const today = new Date();
-  
+
   // Generate POs based on DB vendors
   vendors.forEach((vendor, vIdx) => {
     const seed = getSeedHash(vendor.id);
     const numPOs = 3 + (seed % 5);
-    
+
     for (let i = 0; i < numPOs; i++) {
       const pSeed = seed + i;
       let status = statuses[pSeed % statuses.length];
-      
+
       const expectedDate = new Date(today);
       expectedDate.setDate(today.getDate() + ((pSeed % 14) - 7)); // -7 to +7 days
-      
+
       const isChicago = vendor.city.toLowerCase() === "chicago";
       if (isChicago && i === 0) {
         status = "Delayed"; // Force a delay so supply risk is triggered
         expectedDate.setDate(today.getDate() - 2); // Expected 2 days ago
       }
-      
+
       let actualDate: string | undefined = undefined;
       if (status === "Delivered") {
         const actual = new Date(expectedDate);
@@ -79,7 +79,7 @@ export function generateDBProcurementData(stores: Store[], vendors: Vendor[]) {
         else if (pSeed % 3 === 0) actual.setDate(actual.getDate() - 1); // Early
         actualDate = actual.toISOString().split("T")[0];
       }
-      
+
       const expectedItems = 50 + (pSeed % 100);
       const receivedItems = status === "Delivered" ? expectedItems : 0;
 
@@ -123,7 +123,7 @@ export function generateDBProcurementData(stores: Store[], vendors: Vendor[]) {
     priority: "High",
     actionLabel: "Review Orders"
   });
-  
+
   if (vendors.length > 1) {
     recommendations.push({
       id: "R2",
@@ -134,28 +134,28 @@ export function generateDBProcurementData(stores: Store[], vendors: Vendor[]) {
     });
   }
 
-    // Generate some realistic Vendor Issues based on vendors
-    const issueTypes = ["Delivery delayed by 2 days", "Fill Rate below SLA", "Invoice mismatch", "Quality control failure", "Missing documentation"];
-    const severities = ["High", "Medium", "Low", "High", "Medium"];
-    
-    vendors.forEach((vendor, vIdx) => {
-      const seed = getSeedHash(vendor.id + "issue");
-      const isChicago = vendor.city.toLowerCase() === "chicago";
-      // Ensure Chicago vendors have issues so the dashboard isn't empty
-      if (seed % 3 === 0 || (isChicago && vIdx % 2 === 0)) {
-        const issueIdx = (isChicago && vIdx % 2 === 0) ? 0 : (seed % issueTypes.length); // Force "High" priority for Chicago
-        issues.push({
-          id: `ISSUE-${1000 + vIdx}`,
-          vendorId: vendor.id,
-          vendorName: vendor.name,
-          issueType: issueTypes[issueIdx],
-          dateReported: new Date(today.getTime() - (seed % 5) * 86400000).toISOString().split("T")[0],
-          status: "Open", // Force them to be open so they appear in action center
-          priority: severities[issueIdx] as any,
-          assignedTo: "Procurement Team"
-        });
-      }
-    });
+  // Generate some realistic Vendor Issues based on vendors
+  const issueTypes = ["Delivery delayed by 2 days", "Fill Rate below SLA", "Invoice mismatch", "Quality control failure", "Missing documentation"];
+  const severities = ["High", "Medium", "Low", "High", "Medium"];
+
+  vendors.forEach((vendor, vIdx) => {
+    const seed = getSeedHash(vendor.id + "issue");
+    const isChicago = vendor.city.toLowerCase() === "chicago";
+    // Ensure Chicago vendors have issues so the dashboard isn't empty
+    if (seed % 3 === 0 || (isChicago && vIdx % 2 === 0)) {
+      const issueIdx = (isChicago && vIdx % 2 === 0) ? 0 : (seed % issueTypes.length); // Force "High" priority for Chicago
+      issues.push({
+        id: `ISSUE-${1000 + vIdx}`,
+        vendorId: vendor.id,
+        vendorName: vendor.name,
+        issueType: issueTypes[issueIdx],
+        dateReported: new Date(today.getTime() - (seed % 5) * 86400000).toISOString().split("T")[0],
+        status: "Open", // Force them to be open so they appear in action center
+        priority: severities[issueIdx] as any,
+        assignedTo: "Procurement Team"
+      });
+    }
+  });
 
   return { purchaseOrders, purchaseRequests, issues, recommendations };
 }

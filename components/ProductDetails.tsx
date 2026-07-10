@@ -468,10 +468,7 @@ export default function ProductDetails({ productCode, onBack }: ProductDetailsPr
               <span className="text-slate-400 font-medium">Last Purchase Rate</span>
               <span>$ {(item.unitPrice * 0.98).toFixed(2)}</span>
             </div>
-            <div className="flex justify-between items-center py-0.5 border-t border-slate-50 pt-3 mt-1">
-              <span className="text-slate-400 font-medium">Last Purchase Date</span>
-              <span className="text-slate-700 font-bold">18 Jun 2026</span>
-            </div>
+
           </div>
         </div>
 
@@ -492,16 +489,16 @@ export default function ProductDetails({ productCode, onBack }: ProductDetailsPr
               <span className="text-slate-400 font-medium">Average Monthly Sales</span>
               <span>{Math.round(item.avgDailyConsumption * 30)} {item.uom}</span>
             </div>
-            <div className="flex justify-between items-center py-0.5">
+            {/* <div className="flex justify-between items-center py-0.5">
               <span className="text-slate-400 font-medium">Last Month Sales</span>
               <span>{Math.round(item.avgDailyConsumption * 28)} {item.uom}</span>
-            </div>
-            <div className="flex justify-between items-center py-0.5 border-t border-slate-50 pt-3 mt-1">
+            </div> */}
+            {/* <div className="flex justify-between items-center py-0.5 border-t border-slate-50 pt-3 mt-1">
               <span className="text-slate-400 font-medium">Peak Monthly Sales</span>
               <span className="text-slate-700 font-bold">
                 {Math.round(item.avgDailyConsumption * 35)} {item.uom} <span className="text-[10px] text-slate-400 font-normal">(Jan 2026)</span>
               </span>
-            </div>
+            </div> */}
           </div>
         </div>
 
