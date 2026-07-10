@@ -298,3 +298,57 @@ export function getProductsForVendorDB(masterProducts: Product[], vendorId: stri
 
   return productLinks;
 }
+
+export interface DynamicDates {
+  daysToStockout: number;
+  predictedStockoutDate: string;
+  orderByDate: string;
+  riskLevel: "High" | "Medium" | "Low";
+  prMrStatus: string;
+}
+
+export function getDynamicInventoryDates(item: any, todayDate: Date): DynamicDates {
+  const avgCons = item.avgDailyConsumption || 1.5;
+  const leadTime = item.leadTimeDays || 3;
+  const currentStock = item.currentStock;
+
+  // Days to stockout
+  const daysToStockout = avgCons > 0 ? Math.floor(currentStock / avgCons) : 999;
+
+  // Predicted Stockout Date
+  const stockoutDateObj = new Date(todayDate);
+  stockoutDateObj.setDate(todayDate.getDate() + daysToStockout);
+
+  const pad = (num: number) => String(num).padStart(2, "0");
+  const predictedStockoutDate = `${pad(stockoutDateObj.getDate())}-${pad(stockoutDateObj.getMonth() + 1)}-${stockoutDateObj.getFullYear()}`;
+
+  // Order By Date
+  const orderByDateObj = new Date(stockoutDateObj);
+  orderByDateObj.setDate(stockoutDateObj.getDate() - leadTime);
+  const orderByDate = `${pad(orderByDateObj.getDate())}-${pad(orderByDateObj.getMonth() + 1)}-${orderByDateObj.getFullYear()}`;
+
+  // Risk Level
+  let riskLevel: "High" | "Medium" | "Low" = "Low";
+  if (daysToStockout <= 7) {
+    riskLevel = "High";
+  } else if (daysToStockout <= 15) {
+    riskLevel = "Medium";
+  }
+
+  // PR/MR Status
+  let prMrStatus = "Monitor";
+  const derivedRol = Math.ceil(avgCons * leadTime) + item.safetyStockLevel;
+  if (currentStock <= derivedRol) {
+    prMrStatus = "PR";
+  } else if (currentStock <= (derivedRol + avgCons * 3)) {
+    prMrStatus = "MR";
+  }
+
+  return {
+    daysToStockout,
+    predictedStockoutDate,
+    orderByDate,
+    riskLevel,
+    prMrStatus
+  };
+}

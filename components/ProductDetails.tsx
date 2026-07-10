@@ -3,6 +3,7 @@
 import React from "react";
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
+import { getDynamicInventoryDates } from "../utils/dbCalculations";
 
 interface ProductDetailsProps {
   productCode: string;
@@ -76,12 +77,15 @@ export default function ProductDetails({ productCode, onBack }: ProductDetailsPr
   const { allInventory, vendors } = useData();
   const { user } = useAuth();
 
+  const TODAY = new Date();
+  TODAY.setHours(0, 0, 0, 0);
+
   // Find matching inventory item for this product code
-  const item = allInventory.find(
+  const rawItem = allInventory.find(
     (inv) => inv.code === productCode && (user?.storeId ? inv.storeId === user.storeId : true)
   );
 
-  if (!item) {
+  if (!rawItem) {
     return (
       <div className="bg-white border border-slate-100 rounded-3xl p-8 text-center text-slate-500">
         <p className="font-semibold text-lg">Product Details Not Found</p>
@@ -95,11 +99,17 @@ export default function ProductDetails({ productCode, onBack }: ProductDetailsPr
     );
   }
 
+  const dyn = getDynamicInventoryDates(rawItem, TODAY);
+  const item = {
+    ...rawItem,
+    predictedStockoutDate: dyn.predictedStockoutDate,
+    orderByDate: dyn.orderByDate,
+    riskLevel: dyn.riskLevel,
+    prMrStatus: dyn.prMrStatus
+  };
+
   const vendor = vendors.find((v) => v.id === item.vendorId);
   const manufacturer = vendor ? vendor.name : "BP Lubricants USA";
-
-  const TODAY = new Date();
-  TODAY.setHours(0, 0, 0, 0);
 
   const calcDaysRemaining = (dateStr: string): number => {
     const parts = dateStr.split("-");
@@ -168,16 +178,6 @@ export default function ProductDetails({ productCode, onBack }: ProductDetailsPr
 
   // Generate dynamic extrapolatory graph data (21 days centered around Today)
   const getGraphData = () => {
-    const startDate = new Date(TODAY);
-    startDate.setDate(TODAY.getDate() - 5);
-
-    const datesList = [];
-    for (let i = 0; i < 21; i++) {
-      const d = new Date(startDate);
-      d.setDate(startDate.getDate() + i);
-      datesList.push(d);
-    }
-
     const orderParts = item.orderByDate.split("-");
     const orderDate = orderParts.length === 3
       ? new Date(parseInt(orderParts[2]), parseInt(orderParts[1]) - 1, parseInt(orderParts[0]))
@@ -190,16 +190,22 @@ export default function ProductDetails({ productCode, onBack }: ProductDetailsPr
       : TODAY;
     stockoutDate.setHours(0, 0, 0, 0);
 
-    const points = datesList.map((d) => {
+    const points = [];
+    for (let i = -5; i <= 15; i++) {
+      const d = new Date(TODAY);
+      d.setDate(TODAY.getDate() + i);
+
+      // Simple depletion calculation: decreases daily by avgDailyConsumption down to 0
       const diffDays = Math.round((d.getTime() - TODAY.getTime()) / 86400000);
       const val = Math.max(0, item.currentStock - diffDays * item.avgDailyConsumption);
-      return {
+
+      points.push({
         date: d,
-        value: val,
+        value: Math.round(val * 10) / 10,
         formatted: `${String(d.getDate()).padStart(2, "0")} ${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getMonth()]}`,
-        isForecast: d.getTime() > orderDate.getTime()
-      };
-    });
+        isForecast: d.getTime() > TODAY.getTime()
+      });
+    }
 
     return { points, orderDate, stockoutDate };
   };
@@ -218,17 +224,10 @@ export default function ProductDetails({ productCode, onBack }: ProductDetailsPr
   const viewBoxWidth = plotWidth + paddingLeft + paddingRight;
   const viewBoxHeight = plotHeight + paddingTop + paddingBottom;
 
-  const maxVal = Math.max(...points.map((p) => p.value), dynamicRol, item.safetyStockLevel, 100) * 1.25;
+  const maxVal = Math.max(...points.map((p) => p.value), dynamicRol, item.safetyStockLevel, 30) * 1.25;
 
   const getX = (idx: number) => paddingLeft + (idx / 20) * plotWidth;
   const getY = (val: number) => paddingTop + plotHeight - (val / maxVal) * plotHeight;
-
-  // Filter paths for Actual (Solid Green) and Forecast (Dashed Blue)
-  const actualIndices = points.map((p, idx) => ({ p, idx })).filter((x) => !x.p.isForecast);
-  const forecastIndices = points.map((p, idx) => ({ p, idx })).filter((x) => x.p.isForecast || x.idx === actualIndices[actualIndices.length - 1]?.idx);
-
-  const actualPath = actualIndices.map(({ p, idx }, i) => `${i === 0 ? "M" : "L"} ${getX(idx)} ${getY(p.value)}`).join(" ");
-  const forecastPath = forecastIndices.map(({ p, idx }, i) => `${i === 0 ? "M" : "L"} ${getX(idx)} ${getY(p.value)}`).join(" ");
 
   // Find X coordinate positions for Order Before & Predicted Stockout lines
   const orderIdx = points.findIndex((p) => p.date.getTime() === orderDate.getTime());
@@ -236,6 +235,20 @@ export default function ProductDetails({ productCode, onBack }: ProductDetailsPr
 
   const stockoutIdx = points.findIndex((p) => p.date.getTime() === stockoutDate.getTime());
   const stockoutX = getX(stockoutIdx !== -1 ? stockoutIdx : 12);
+
+  const maxAllowedIdx = stockoutIdx !== -1 ? stockoutIdx : 20;
+
+  // Filter paths for Actual (Solid Green) and Forecast (Dashed Blue) stopping at stockout date
+  const actualIndices = points
+    .map((p, idx) => ({ p, idx }))
+    .filter((x) => !x.p.isForecast && x.idx <= maxAllowedIdx);
+    
+  const forecastIndices = points
+    .map((p, idx) => ({ p, idx }))
+    .filter((x) => (x.p.isForecast || x.idx === actualIndices[actualIndices.length - 1]?.idx) && x.idx <= maxAllowedIdx);
+
+  const actualPath = actualIndices.map(({ p, idx }, i) => `${i === 0 ? "M" : "L"} ${getX(idx)} ${getY(p.value)}`).join(" ");
+  const forecastPath = forecastIndices.map(({ p, idx }, i) => `${i === 0 ? "M" : "L"} ${getX(idx)} ${getY(p.value)}`).join(" ");
 
   // Y positions for ROL & Safety Stock levels
   const rolY = getY(dynamicRol);
@@ -258,10 +271,10 @@ export default function ProductDetails({ productCode, onBack }: ProductDetailsPr
               <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Product Code</span>
               <span>{item.code}</span>
             </div>
-            <div className="flex flex-col">
+            {/* <div className="flex flex-col">
               <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">SKU</span>
               <span>{item.code}</span>
-            </div>
+            </div> */}
             <div className="flex flex-col">
               <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Category</span>
               <span>{item.category}</span>
@@ -338,11 +351,11 @@ export default function ProductDetails({ productCode, onBack }: ProductDetailsPr
 
               {/* Horizontal Reference Lines: ROL and Safety Stock */}
               <line x1={paddingLeft} y1={rolY} x2={paddingLeft + plotWidth} y2={rolY} stroke="#3b82f6" strokeWidth="1.25" strokeDasharray="5,5" />
-              <line x1={paddingLeft} y1={safetyY} x2={paddingLeft + plotWidth} y2={safetyY} stroke="#f43f5e" strokeWidth="1.25" strokeDasharray="5,5" />
+              <line x1={paddingLeft} y1={safetyY} x2={paddingLeft + plotWidth} y2={safetyY} stroke="#ef4444" strokeWidth="1.75" strokeDasharray="4,4" />
 
               {/* Labels for horizontal markers on the right edge */}
-              <text x={paddingLeft + plotWidth - 5} y={rolY - 4} fill="#3b82f6" className="text-[9px] font-extrabold" textAnchor="end">ROL ({dynamicRol})</text>
-              <text x={paddingLeft + plotWidth - 5} y={safetyY - 4} fill="#f43f5e" className="text-[9px] font-extrabold" textAnchor="end">Safety Stock ({item.safetyStockLevel})</text>
+              <text x={paddingLeft + plotWidth - 5} y={rolY - 6} fill="#3b82f6" className="text-[10px] font-black uppercase tracking-wider" textAnchor="end">ROL ({dynamicRol})</text>
+              <text x={paddingLeft + plotWidth - 5} y={safetyY - 6} fill="#ef4444" className="text-[10px] font-black uppercase tracking-wider" textAnchor="end">Safety Stock ({item.safetyStockLevel})</text>
 
               {/* Vertical Marker Line: Order Before */}
               <line x1={orderX} y1={paddingTop - 15} x2={orderX} y2={paddingTop + plotHeight} stroke="#3b82f6" strokeWidth="1.5" />
@@ -367,6 +380,33 @@ export default function ProductDetails({ productCode, onBack }: ProductDetailsPr
               {forecastIndices.map(({ p, idx }) => (
                 <circle key={idx} cx={getX(idx)} cy={getY(p.value)} r="3.5" fill="#3b82f6" />
               ))}
+
+              {/* Today Current Stock Warning Highlight */}
+              {(() => {
+                const todayX = getX(5);
+                const todayY = getY(item.currentStock);
+                const isBelowSafety = item.currentStock < item.safetyStockLevel;
+                return (
+                  <g>
+                    {isBelowSafety ? (
+                      <>
+                        <circle cx={todayX} cy={todayY} r="7" className="fill-rose-500/20 stroke-rose-500 animate-pulse" strokeWidth="1.5" />
+                        <circle cx={todayX} cy={todayY} r="3.5" fill="#f43f5e" />
+                        <text x={todayX + 10} y={todayY + 3} fill="#f43f5e" className="text-[10px] font-black uppercase tracking-wider">
+                          Current Stock ({item.currentStock}) - Below Safety!
+                        </text>
+                      </>
+                    ) : (
+                      <>
+                        <circle cx={todayX} cy={todayY} r="5" fill="#10b981" />
+                        <text x={todayX + 10} y={todayY + 3} fill="#10b981" className="text-[10px] font-black uppercase tracking-wider">
+                          Current Stock ({item.currentStock})
+                        </text>
+                      </>
+                    )}
+                  </g>
+                );
+              })()}
 
             </svg>
           </div>

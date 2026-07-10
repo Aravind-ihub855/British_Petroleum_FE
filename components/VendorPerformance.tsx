@@ -787,7 +787,7 @@ export default function VendorPerformance({
                 </span>
                 <span className="text-base font-black text-emerald-700 mt-1 block">{activeVendorWeightedScore.toFixed(1)}</span>
               </div>
-              
+{/*               
               <div 
                 className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150 cursor-help"
                 title="Performance Score = Fill Rate × 40% + On-Time Delivery × 25% + Order Accuracy × 20% + Stockouts × 10% + Lead Time × 5%"
@@ -797,7 +797,7 @@ export default function VendorPerformance({
                   <svg className="w-3 h-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 </span>
                 <span className="text-base font-extrabold text-slate-900 mt-1 block">{activeVendorPerfScore.toFixed(1)}</span>
-              </div>
+              </div> */}
 
               <div 
                 className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150 cursor-help"

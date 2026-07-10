@@ -3,6 +3,7 @@
 import React from "react";
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
+import { getDynamicInventoryDates } from "../utils/dbCalculations";
 
 interface DashboardOverviewProps {
   onNavigate: (tabId: string, subTabId: string, vendorName?: string, productCode?: string) => void;
@@ -75,7 +76,17 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
   let overallHighRiskProductCount = 0; // for store manager KPI
 
   displayStores.forEach((st) => {
-    const inv = getStoreInventory(st.id);
+    const rawInv = getStoreInventory(st.id);
+    const inv = rawInv.map((item) => {
+      const dyn = getDynamicInventoryDates(item, TODAY);
+      return {
+        ...item,
+        predictedStockoutDate: dyn.predictedStockoutDate,
+        orderByDate: dyn.orderByDate,
+        riskLevel: dyn.riskLevel,
+        prMrStatus: dyn.prMrStatus
+      };
+    });
 
     // Check if this store has any High-risk items (recalculated from actual today)
     const hasHighRisk = inv.some((item) => calcRiskLevel(calcDaysRemaining(item.predictedStockoutDate)) === "High");

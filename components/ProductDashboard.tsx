@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useData } from "@/context/DataContext";
+import { getDynamicInventoryDates } from "../utils/dbCalculations";
 
 interface ProductDashboardProps {
   onNavigate: (tabId: string, subTabId: string, vendorName?: string, productCode?: string) => void;
@@ -60,6 +61,7 @@ export default function ProductDashboard({ onNavigate }: ProductDashboardProps) 
     const inv = getStoreInventory(st.id);
     const item = inv.find((p) => p.code === selectedProductCode);
     if (item) {
+      const dyn = getDynamicInventoryDates(item, TODAY);
       carryingStores.push({
         storeId: st.id,
         storeName: st.name,
@@ -67,11 +69,11 @@ export default function ProductDashboard({ onNavigate }: ProductDashboardProps) 
         currentStock: item.currentStock,
         safetyStockLevel: item.safetyStockLevel,
         avgConsumption: item.avgDailyConsumption,
-        predictedStockoutDate: item.predictedStockoutDate,
+        predictedStockoutDate: dyn.predictedStockoutDate,
         roq: item.recommendedRoq,
-        orderByDate: item.orderByDate,
-        prMrStatus: item.prMrStatus,
-        riskLevel: item.riskLevel,
+        orderByDate: dyn.orderByDate,
+        prMrStatus: dyn.prMrStatus,
+        riskLevel: dyn.riskLevel,
         leadTimeDays: item.leadTimeDays || 3
       });
     }
@@ -114,7 +116,7 @@ export default function ProductDashboard({ onNavigate }: ProductDashboardProps) 
       </div>
 
       {/* KPI Cards Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
         <div className="bg-white p-5 rounded-2xl border-t-4 border-t-bp-green border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
           <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Available In Stores</span>
           <span className="text-3xl font-extrabold tracking-tight text-slate-900 mt-2">{totalCarrying}</span>

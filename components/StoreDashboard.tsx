@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
+import { getDynamicInventoryDates } from "../utils/dbCalculations";
 
 interface StoreDashboardProps {
   onNavigate: (tabId: string, subTabId: string, vendorName?: string, productCode?: string) => void;
@@ -49,6 +50,10 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
     }
   }, [stores, selectedStoreId, user, isStoreManager]);
 
+  // Actual today (midnight) for all calculations
+  const TODAY = new Date();
+  TODAY.setHours(0, 0, 0, 0);
+
   if (loading || !selectedStoreId) {
     return (
       <div className="flex justify-center items-center py-12 bg-white/40 backdrop-blur-md rounded-3xl p-8 border border-slate-200/50">
@@ -60,11 +65,17 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
     );
   }
 
-  const inventory = getStoreInventory(selectedStoreId);
-
-  // Actual today (midnight) for all calculations
-  const TODAY = new Date();
-  TODAY.setHours(0, 0, 0, 0);
+  const rawInventory = getStoreInventory(selectedStoreId);
+  const inventory = rawInventory.map((item) => {
+    const dyn = getDynamicInventoryDates(item, TODAY);
+    return {
+      ...item,
+      predictedStockoutDate: dyn.predictedStockoutDate,
+      orderByDate: dyn.orderByDate,
+      riskLevel: dyn.riskLevel,
+      prMrStatus: dyn.prMrStatus
+    };
+  });
 
   const calcDays = (dateStr: string): number => {
     const parts = dateStr.split("-");
@@ -84,13 +95,38 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
   const atRiskCount = inventory.filter((item) => item.currentStock <= item.rol).length;
   const stockoutIn7Days = inventory.filter((item) => calcRisk(calcDays(item.predictedStockoutDate)) === "High").length;
   
-  const overdueOrdersCount = inventory.filter((item) => {
+  const overdueOrders = inventory.filter((item) => {
     const parts = item.orderByDate.split("-");
     if (parts.length !== 3) return false;
     const orderDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
     orderDate.setHours(0, 0, 0, 0);
     return orderDate.getTime() < TODAY.getTime();
-  }).length;
+  });
+  const overdueOrdersCount = overdueOrders.length;
+
+  // Group overdue items by category for breakdown
+  const overdueByCategory: Record<string, number> = {};
+  overdueOrders.forEach((item) => {
+    const catShort = item.category === "Automotive" ? "Auto" : item.category;
+    overdueByCategory[catShort] = (overdueByCategory[catShort] || 0) + 1;
+  });
+  const overdueCategorySummary = Object.entries(overdueByCategory)
+    .map(([cat, count]) => `${cat}: ${count}`)
+    .join(" | ");
+
+  // Compile detailed multiline tooltip content
+  const overdueTooltip = [
+    `Overdue Orders: ${overdueOrdersCount} products past reorder deadline.`,
+    `\nBreakdown by Category:`,
+    ...Object.entries(overdueByCategory).map(([cat, count]) => `• ${cat}: ${count} ${count === 1 ? 'item' : 'items'}`),
+    `\nTop Overdue Products:`,
+    ...overdueOrders.slice(0, 5).map((item, idx) => {
+      const parts = item.orderByDate.split("-");
+      const orderDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+      const diffDays = Math.round((TODAY.getTime() - orderDate.getTime()) / 86400000);
+      return `${idx + 1}. ${item.name} (${diffDays}d overdue)`;
+    })
+  ].join("\n");
 
   const getFsnCategory = (avgDaily: number): "Fast Moving" | "Slow Moving" | "Non Moving" => {
     if (avgDaily >= 25.0) return "Fast Moving";
@@ -242,11 +278,12 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
         </div>
         <div 
           className="bg-white p-5 rounded-2xl border-t-4 border-t-rose-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect"
-          title="Overdue Orders: Active orders whose expected delivery date has passed without stock check-in"
+          title={overdueTooltip}
         >
           <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Overdue Orders</span>
           <span className="text-3xl font-extrabold tracking-tight text-rose-600 mt-2">{overdueOrdersCount}</span>
           <p className="text-[9.5px] text-slate-400 font-bold mt-1.5 uppercase tracking-wide">Orders past deadline</p>
+
         </div>
       </div>
 

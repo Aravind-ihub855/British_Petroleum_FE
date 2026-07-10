@@ -5,6 +5,7 @@ import { useData } from "@/context/DataContext";
 import { useAuth } from "@/context/AuthContext";
 
 interface NonMovingRow {
+  code: string;
   product: string;
   uom: string;
   totalStock: number;
@@ -53,9 +54,10 @@ export default function InventoryAnalysis() {
   }
 
   // Dynamically compute FSN categories based on actual sales volumes
-  const allStoreItemsMap: Record<string, { name: string; uom: string; stock: number; totalConsumption: number; storeCount: number }> = {};
+  const allStoreItemsMap: Record<string, { code: string; name: string; uom: string; stock: number; totalConsumption: number; storeCount: number }> = {};
   masterProducts.forEach((p) => {
     allStoreItemsMap[p.code] = {
+      code: p.code,
       name: p.name,
       uom: p.uom,
       stock: 0,
@@ -80,6 +82,7 @@ export default function InventoryAnalysis() {
     .map((item) => {
       const avgConsumption = item.totalConsumption / item.storeCount;
       return {
+        code: item.code,
         name: item.name,
         uom: item.uom,
         stock: item.stock,
@@ -113,6 +116,7 @@ export default function InventoryAnalysis() {
       const mStr = String(lastSaleDate.getMonth() + 1).padStart(2, "0");
 
       return {
+        code: item.code,
         product: item.name,
         uom: item.uom,
         totalStock: item.stock,
@@ -127,6 +131,7 @@ export default function InventoryAnalysis() {
   const fastMovingItems = uniqueItemsList
     .filter((item) => item.avgConsumption >= 25.0 && item.stock > 0)
     .map((item) => ({
+      code: item.code,
       product: item.name,
       uom: item.uom,
       totalStock: item.stock,
@@ -318,14 +323,17 @@ export default function InventoryAnalysis() {
                   <th className="py-3 px-4 font-bold border-r border-slate-100 cursor-help" title="Product SKU catalog name">Product</th>
                   <th className="py-3 px-3 text-center font-bold border-r border-slate-100 cursor-help" title="Unit of Measure">UOM</th>
                   <th className="py-3 px-3 text-right font-bold border-r border-slate-100 cursor-help" title="Aggregate physical inventory currently in stock across filtered stores">Total Stock</th>
-                  <th className="py-3 px-3 text-right font-bold border-r border-slate-100 cursor-help" title="Peak historical daily unit consumption recorded for this item">Max Sales/Day</th>
+                  <th className="py-3 px-3 text-right font-bold border-r border-slate-100 cursor-help" title="Average daily unit consumption (sales velocity) recorded for this item">Avg Sales/Day</th>
                   <th className="py-3 px-4 text-center font-bold cursor-help" title="FSN Classification rating based on average daily velocity">Velocity</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
                 {fastMovingItems.map((row, idx) => (
                   <tr key={idx} className="hover:bg-slate-50/40 transition duration-75">
-                    <td className="py-3 px-4 font-bold text-slate-800 border-r border-slate-100">{row.product}</td>
+                    <td className="py-3 px-4 text-slate-800 border-r border-slate-100">
+                      <div className="text-slate-800 font-bold">{row.product}</div>
+                      <div className="text-[9px] text-slate-400 font-bold uppercase tracking-wide mt-0.5">{row.code}</div>
+                    </td>
                     <td className="py-3 px-3 text-center text-slate-400 font-medium border-r border-slate-100">{row.uom}</td>
                     <td className="py-3 px-3 text-right text-slate-700 font-medium border-r border-slate-100">{row.totalStock.toLocaleString()}</td>
                     <td className="py-3 px-3 text-right text-slate-900 font-bold border-r border-slate-100">{row.maxConsumption.toFixed(1)}</td>
@@ -370,7 +378,10 @@ export default function InventoryAnalysis() {
               <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
                 {nonMovingItems.map((row, idx) => (
                   <tr key={idx} className="hover:bg-slate-50/40 transition duration-75">
-                    <td className="py-3 px-3 font-bold text-slate-800 border-r border-slate-100 leading-snug">{row.product}</td>
+                    <td className="py-3 px-3 text-slate-800 border-r border-slate-100 leading-snug">
+                      <div className="text-slate-800 font-bold">{row.product}</div>
+                      <div className="text-[9px] text-slate-400 font-bold uppercase tracking-wide mt-0.5">{row.code}</div>
+                    </td>
                     <td className="py-3 px-2 text-center text-slate-400 font-medium border-r border-slate-100 whitespace-nowrap">{row.uom}</td>
                     <td className="py-3 px-2 text-right text-slate-700 font-medium border-r border-slate-100 whitespace-nowrap">{row.totalStock.toLocaleString()}</td>
                     <td className="py-3 px-2 text-center text-slate-500 font-medium border-r border-slate-100 whitespace-nowrap">{row.lastSale}</td>
