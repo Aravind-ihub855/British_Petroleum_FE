@@ -83,7 +83,7 @@ export default function ProductDashboard({ onNavigate }: ProductDashboardProps) 
   const totalCarrying = carryingStores.length;
   const totalStock = carryingStores.reduce((sum, s) => sum + s.currentStock, 0);
   const totalRoq = carryingStores.reduce((sum, s) => sum + s.roq, 0);
-  const storesAtRisk = carryingStores.filter((s) => s.prMrStatus === "PR").length;
+  const storesAtRisk = carryingStores.filter((s) => s.prMrStatus === "PR" || s.prMrStatus === "MR").length;
   const stockoutIn7Days = carryingStores.filter((s) => s.riskLevel === "High").length;
 
   return (
@@ -120,12 +120,14 @@ export default function ProductDashboard({ onNavigate }: ProductDashboardProps) 
         <div className="bg-white p-5 rounded-2xl border-t-4 border-t-bp-green border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
           <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Available In Stores</span>
           <span className="text-3xl font-extrabold tracking-tight text-slate-900 mt-2">{totalCarrying}</span>
+          <p className="text-[9.5px] text-slate-400 font-bold mt-1.5 uppercase tracking-wide">Outlets stocking item</p>
         </div>
         <div className="bg-white p-5 rounded-2xl border-t-4 border-t-bp-green border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
           <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Total Current Stock</span>
           <span className="text-3xl font-extrabold tracking-tight text-slate-900 mt-2">
             {totalStock.toLocaleString()} <span className="text-xs font-bold text-slate-400 ml-0.5">{activeProduct.uom === "Litres" ? "Ltr" : activeProduct.uom === "Kilograms" ? "Kg" : "Pcs"}</span>
           </span>
+          <p className="text-[9.5px] text-slate-400 font-bold mt-1.5 uppercase tracking-wide">Total physical inventory</p>
         </div>
         {/* <div className="bg-white p-5 rounded-2xl border-t-4 border-t-bp-yellow border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
           <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Total ROQ</span>
@@ -133,13 +135,21 @@ export default function ProductDashboard({ onNavigate }: ProductDashboardProps) 
             {totalRoq.toLocaleString()} <span className="text-xs font-bold text-slate-400 ml-0.5">{activeProduct.uom === "Litres" ? "Ltr" : activeProduct.uom === "Kilograms" ? "Kg" : "Pcs"}</span>
           </span>
         </div> */}
-        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-rose-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect">
-          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Stores at Risk</span>
-          <span className="text-3xl font-extrabold tracking-tight text-rose-600 mt-2">{storesAtRisk}</span>
+        <div 
+          className="bg-white p-5 rounded-2xl border-t-4 border-t-orange-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect"
+          title="Stores below ROL: Number of stores carrying this product where current stock is below or equal to the Reorder Level (ROL) requiring replenishment."
+        >
+          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Stores below ROL</span>
+          <span className="text-3xl font-extrabold tracking-tight text-orange-500 mt-2">{storesAtRisk}</span>
+          <p className="text-[9.5px] text-slate-400 font-bold mt-1.5 uppercase tracking-wide">Replenishment needed</p>
         </div>
-        <div className="bg-white p-5 rounded-2xl border-t-4 border-t-rose-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect col-span-2 lg:col-span-1">
-          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Stockout in 7 Days</span>
+        <div 
+          className="bg-white p-5 rounded-2xl border-t-4 border-t-rose-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect col-span-2 lg:col-span-1"
+          title="Critical Stockout (within 7 days): Number of stores carrying this product where stock is projected to run out completely within 7 days."
+        >
+          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Critical Stockout</span>
           <span className="text-3xl font-extrabold tracking-tight text-rose-600 mt-2">{stockoutIn7Days}</span>
+          <p className="text-[9.5px] text-slate-400 font-bold mt-1.5 uppercase tracking-wide">Stockout within 7 days</p>
         </div>
       </div>
 

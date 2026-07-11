@@ -278,7 +278,7 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
       <div className="space-y-8 animate-fadeIn">
 
       {/* KPI Cards */}
-      <div className={`grid gap-5 ${isStoreManager ? "grid-cols-2 lg:grid-cols-5" : "grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"}`}>
+      <div className={`grid gap-5 ${isStoreManager ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"}`}>
 
         {!isStoreManager && (
           <div 
@@ -351,7 +351,7 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
           <span className="text-3xl font-extrabold tracking-tight text-orange-550">{belowReorderCount}</span>
           <p className="text-[10px] text-slate-400 mt-1 font-medium">{belowReorderPct}% SKU reorder limits</p>
         </div>
-
+{/* 
         <div 
           className={`bg-white border-t-4 ${healthTheme.border} border-x border-b border-slate-100 rounded-2xl p-5 shadow-sm card-hover-effect text-left`}
           title="Inventory Health: Percentage of active items with > 15 days of projected stock safety remaining"
@@ -364,7 +364,7 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
           </div>
           <span className={`text-3xl font-extrabold tracking-tight ${healthTheme.text}`}>{inventoryHealthPct}%</span>
           <p className={`text-[10px] font-extrabold mt-1 uppercase ${healthTheme.text}`}>{inventoryHealthLabel}</p>
-        </div>
+        </div> */}
 
       </div>
 

@@ -167,7 +167,7 @@ export default function LocationDashboard({ onNavigate }: LocationDashboardProps
           className="bg-white p-5 rounded-2xl border-t-4 border-t-rose-600 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect"
           title="At Risk Items: Combined count of store inventory records currently below their Reorder Level (ROL) in this city"
         >
-          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">At Risk Items</span>
+          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">At Risk Store Items</span>
           <span className="text-3xl font-extrabold tracking-tight text-rose-600 mt-2">{cityMetrics.atRiskCount}</span>
         </div>
         <div 

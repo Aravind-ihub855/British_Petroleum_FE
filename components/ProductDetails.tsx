@@ -456,14 +456,14 @@ export default function ProductDetails({ productCode, onBack }: ProductDetailsPr
               <span className="text-slate-400 font-medium">Average Cost per {item.uom.replace(/s$/, "")}</span>
               <span className="font-bold text-slate-900">$ {item.unitPrice.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between items-center py-0.5">
+            {/* <div className="flex justify-between items-center py-0.5">
               <span className="text-slate-400 font-medium">Weighted Average (30 Days)</span>
               <span>$ {(item.unitPrice * 0.99).toFixed(2)}</span>
             </div>
             <div className="flex justify-between items-center py-0.5">
               <span className="text-slate-400 font-medium">Moving Average (30 Days)</span>
               <span>$ {(item.unitPrice * 1.01).toFixed(2)}</span>
-            </div>
+            </div> */}
             <div className="flex justify-between items-center py-0.5">
               <span className="text-slate-400 font-medium">Last Purchase Rate</span>
               <span>$ {(item.unitPrice * 0.98).toFixed(2)}</span>

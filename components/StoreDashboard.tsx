@@ -253,9 +253,9 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
         </div>
         <div 
           className="bg-white p-5 rounded-2xl border-t-4 border-t-rose-500 border-x border-b border-slate-100 shadow-sm flex flex-col text-left card-hover-effect"
-          title="Stockout in 7 Days: Number of products projected to completely stock out within 7 days based on current stock and daily sales"
+          title="Stockout: Number of products projected to completely stock out within 7 days based on current stock and daily sales"
         >
-          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Stockout in 7 Days</span>
+          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Critical Stockout</span>
           <span className="text-3xl font-extrabold tracking-tight text-rose-600 mt-2">{stockoutIn7Days}</span>
           <p className="text-[9.5px] text-slate-400 font-bold mt-1.5 uppercase tracking-wide">Products at risk</p>
         </div>

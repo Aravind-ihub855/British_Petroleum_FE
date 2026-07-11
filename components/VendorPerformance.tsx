@@ -84,12 +84,21 @@ export default function VendorPerformance({
       po.status === "Pending Approval" || po.status === "Pending Review" || po.status === "Returned"
     ).length;
 
-    // On-Time Delivery %: Use the profile target stored in POs (onTimeTarget), averaged across delivered POs
-    // This gives realistic smooth values like 99.4%, 98.8% instead of binary 100%/0%
+    // On-Time Delivery %: Calculated dynamically by comparing actual delivery date against expected delivery date
+    const onTimeDeliveriesCount = deliveredPOs.filter(po => {
+      if (!po.actualDeliveryDate || !po.expectedDeliveryDate) return false;
+      const expParts = po.expectedDeliveryDate.split("-");
+      const actParts = po.actualDeliveryDate.split("-");
+      const expected = expParts.length === 3 
+        ? new Date(parseInt(expParts[2]), parseInt(expParts[1]) - 1, parseInt(expParts[0]))
+        : new Date(po.expectedDeliveryDate);
+      const actual = actParts.length === 3 
+        ? new Date(parseInt(actParts[2]), parseInt(actParts[1]) - 1, parseInt(actParts[0]))
+        : new Date(po.actualDeliveryDate);
+      return actual.getTime() <= expected.getTime();
+    }).length;
     const onTimePercent = deliveredPOs.length > 0
-      ? Math.round(
-          (deliveredPOs.reduce((sum, po) => sum + ((po as any).onTimeTarget ?? 0.92), 0) / deliveredPOs.length) * 100
-        )
+      ? Math.round((onTimeDeliveriesCount / deliveredPOs.length) * 100)
       : 92; // fallback
 
     // Fill Rate %
@@ -99,8 +108,12 @@ export default function VendorPerformance({
       ? parseFloat(((totalReceived / totalExpected) * 100).toFixed(1))
       : 98.0; // fallback
 
-    // Order Accuracy %
-    const orderAccuracyVal = parseFloat((fillRateVal - 0.5).toFixed(1));
+    // Order Accuracy %: Derived from the physical unit rejection rate rather than mock offset
+    const totalRejected = deliveredPOs.reduce((sum, po) => sum + ((po as any).rejectedItems || 0), 0);
+    const rejectionRatePct = totalReceived > 0 
+      ? (totalRejected / totalReceived) * 100 
+      : 0;
+    const orderAccuracyVal = parseFloat((100 - rejectionRatePct).toFixed(1));
 
     // Lead Time Days (aggregate decimal leadTimeDays directly from PO records)
     const leadTimeDays = deliveredPOs.length > 0
@@ -266,10 +279,17 @@ export default function VendorPerformance({
 
   const productVendors = activeProduct ? getVendorsForProductDB(vendors, activeProduct.code, masterProducts).map(v => {
     const vMetrics = getVendorPOMetrics(v.vendorId);
+    const weightedScore = vMetrics.deliveredUnits > 0
+      ? parseFloat((vMetrics.performanceScore * (vMetrics.acceptedUnits / vMetrics.deliveredUnits)).toFixed(1))
+      : vMetrics.performanceScore;
     return {
       ...v,
       performanceScore: vMetrics.performanceScore,
-      weightedScore: parseFloat((vMetrics.performanceScore * (1 - vMetrics.rejectionRatePct / 100)).toFixed(1))
+      weightedScore,
+      // Overwrite static values with real-time PO metrics to resolve table mismatches
+      deliveryTime: `${vMetrics.leadTimeDays} Days`,
+      onTimePercent: vMetrics.onTimePercent,
+      rejectionRate: vMetrics.rejectionRatePct
     };
   }) : [];
 
@@ -369,7 +389,7 @@ export default function VendorPerformance({
                         {/* Card 2: Organisation Weighted Score */}
             <div 
               className="bg-gradient-to-br from-emerald-50 to-teal-50 p-5 rounded-2xl border border-emerald-100 shadow-sm flex items-center justify-between card-hover-effect text-left relative overflow-hidden cursor-help"
-              title="Organisation Weighted Score = Σ(Performance Score × Net Accepted Units) / Σ(Net Accepted Units), Net Accepted Units = Delivered Units - Rejected Units."
+              title={`Organisation Weighted Score = Σ(Vendor Score × Accepted Units) / Σ(Accepted Units)\n\nWhere:\n• Vendor Score = 0.40(Fill Rate) + 0.25(On-Time Delivery) + 0.20(Order Accuracy) + 0.10(Stockout Score) + 0.05(Lead Time Score)\n• Accepted Units = Delivered Units - Rejected Units`}
             >
               <div className="absolute top-0 left-0 w-1 h-full bg-emerald-400 rounded-l-2xl" />
               <div className="space-y-1 pl-1">
@@ -529,38 +549,38 @@ export default function VendorPerformance({
               <table className="w-full text-[11px] text-left">
                 <thead className="bg-slate-50 text-slate-700 font-extrabold tracking-wider uppercase border-b border-slate-200 text-[9.5px]">
                   <tr>
-                    <th className="py-3 px-3.5 border-r border-slate-200 text-left min-w-[220px]">Vendor</th>
-                    <th className="py-3 px-2 border-r border-slate-200 text-center leading-tight">
+                    <th className="py-3 px-3.5 border-r border-slate-200 text-left min-w-[220px] cursor-help" title="Vendor Profile Name and Catalog ID">Vendor</th>
+                    <th className="py-3 px-2 border-r border-slate-200 text-center leading-tight cursor-help" title="Fill Rate = (Total Received Items / Total Expected Items) × 100">
                       <div className="flex flex-col items-center justify-center">
                         <span>Fill Rate</span>
                         {/* <span className="text-[8px] text-slate-400 lowercase">(Weight 40%)</span> */}
                       </div>
                     </th>
-                    <th className="py-3 px-2 border-r border-slate-200 text-center leading-tight">
+                    <th className="py-3 px-2 border-r border-slate-200 text-center leading-tight cursor-help" title="On-Time Delivery = (Delivered POs on or before Expected Date / Total Delivered POs) × 100">
                       <div className="flex flex-col items-center justify-center">
                         <span>On-Time Delivery</span>
                         {/* <span className="text-[8px] text-slate-400 lowercase">(Weight 25%)</span> */}
                       </div>
                     </th>
-                    <th className="py-3 px-2 border-r border-slate-200 text-center leading-tight">
+                    <th className="py-3 px-2 border-r border-slate-200 text-center leading-tight cursor-help" title="Order Accuracy = 100 - Rejection Rate %">
                       <div className="flex flex-col items-center justify-center">
                         <span>Order Accuracy</span>
                         {/* <span className="text-[8px] text-slate-400 lowercase">(Weight 20%)</span> */}
                       </div>
                     </th>
-                    <th className="py-3 px-2 border-r border-slate-200 text-center leading-tight">
+                    <th className="py-3 px-2 border-r border-slate-200 text-center leading-tight cursor-help" title="Supply Delays = Count of active purchase orders with status exactly equal to Delayed">
                       <div className="flex flex-col items-center justify-center">
-                        <span>Stockout Events</span>
+                        <span>Supply Delays</span>
                         {/* <span className="text-[8px] text-slate-400 lowercase">(Weight 10%)</span> */}
                       </div>
                     </th>
-                    <th className="py-3 px-2 border-r border-slate-200 text-center leading-tight">
+                    <th className="py-3 px-2 border-r border-slate-200 text-center leading-tight cursor-help" title="Avg. Actual Lead Time = Sum of actual transit lead times / Total delivered orders">
                       <div className="flex flex-col items-center justify-center">
                         <span>Avg. Actual Lead Time</span>
                         {/* <span className="text-[8px] text-slate-400 lowercase">(Weight 5%)</span> */}
                       </div>
                     </th>
-                    <th className="py-3 px-2 border-r border-slate-200 text-center leading-tight">
+                    <th className="py-3 px-2 border-r border-slate-200 text-center leading-tight cursor-help" title="Monthly PO Spend = Sum of totalAmount of all historical POs placed with the vendor">
                       <div className="flex flex-col items-center justify-center">
                         <span>Monthly PO Spend</span>
                         {/* <span className="text-[8px] text-slate-400 lowercase">(all POs this month)</span> */}
@@ -569,14 +589,14 @@ export default function VendorPerformance({
 
                     <th 
                       className="py-3 px-2 border-r border-slate-200 text-center leading-tight cursor-help"
-                      title="Organisation Weighted Score = Performance Score × (Net Accepted Units / Delivered Units). Net Accepted Units = Delivered Units - Rejected Units."
+                      title={`Organisation Weighted Score = Vendor Score × (Accepted Units / Delivered Units)\n\nWhere:\n• Vendor Score = 0.40(Fill Rate) + 0.25(On-Time Delivery) + 0.20(Order Accuracy) + 0.10(Stockout Score) + 0.05(Lead Time Score)\n• Accepted Units = Delivered Units - Rejected Units`}
                     >
                       <div className="flex flex-col items-center justify-center">
                         <span>Organisation</span>
                         <span>Weighted Score</span>
                       </div>
                     </th>
-                    <th className="py-3 px-3.5 text-center">Status</th>
+                    <th className="py-3 px-3.5 text-center cursor-help" title="Performance Rating: Excellent (≥95%), Good (85%-95%), Needs Improvement (75%-85%), or Critical (<75%)">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100/60 font-semibold text-slate-700">
@@ -779,7 +799,7 @@ export default function VendorPerformance({
             <div className="mt-8 p-5 bg-slate-50/50 rounded-2xl border border-slate-100/80 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 text-left">
               <div 
                 className="bg-emerald-50 p-4 rounded-xl border border-emerald-200 shadow-2xs hover:scale-[1.02] transition duration-150 cursor-help ring-1 ring-emerald-500/20"
-                title="Organisation Weighted Score = Performance Score × (Net Accepted Units / Delivered Units). Net Accepted Units = Delivered Units - Rejected Units."
+                title={`Organisation Weighted Score = Vendor Score × (Accepted Units / Delivered Units)\n\nWhere:\n• Vendor Score = 0.40(Fill Rate) + 0.25(On-Time Delivery) + 0.20(Order Accuracy) + 0.10(Stockout Score) + 0.05(Lead Time Score)\n• Accepted Units = Delivered Units - Rejected Units`}
               >
                 <span className="text-[9px] font-extrabold text-emerald-800 uppercase tracking-wider block flex items-center gap-1">
                   Organisation Weighted Score
@@ -851,9 +871,9 @@ export default function VendorPerformance({
               </div>
               <div 
                 className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150 cursor-help"
-                title="Stockout Events = Total count of store stockouts attributed to lead times of this vendor"
+                title="Supply Delay Incidents = Total count of active purchase orders currently marked as Delayed for this vendor"
               >
-                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Stockout Events</span>
+                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Supply Delays</span>
                 <span className="text-base font-extrabold text-slate-900 mt-1 block">{activeVendorStockouts}</span>
               </div>
               <div 
@@ -888,10 +908,10 @@ export default function VendorPerformance({
               <table className="w-full text-[11px] text-left">
                 <thead className="bg-slate-100 text-slate-700 font-extrabold tracking-wider uppercase border-b border-slate-200 sticky top-0 z-10 text-[9.5px]">
                   <tr>
-                    <th className="py-2.5 px-3.5 border-r border-slate-200 text-left w-[220px] min-w-[220px]">Product</th>
-                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center">UOM</th>
-                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center">Category</th>
-                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight">
+                    <th className="py-2.5 px-3.5 border-r border-slate-200 text-left w-[220px] min-w-[220px] cursor-help" title="Product SKU name and catalog code">Product</th>
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center cursor-help" title="Unit of Measure category (e.g. Litres, Packs, Units)">UOM</th>
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center cursor-help" title="Product classification category">Category</th>
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight cursor-help" title="Base procurement cost paid to this vendor per unit">
                       <div className="flex flex-col items-center justify-center">
                         <span>Unit</span>
                         <span>Cost</span>
@@ -903,30 +923,30 @@ export default function VendorPerformance({
                         <span>Market</span>
                       </div>
                     </th> */}
-                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight">
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight cursor-help" title="Average actual lead time for this specific product (in days)">
                       <div className="flex flex-col items-center justify-center">
                         <span>Lead Time</span>
                       </div>
                     </th>
-                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight">
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight cursor-help" title="Percentage of POs for this product delivered on or before the expected delivery date">
                       <div className="flex flex-col items-center justify-center">
                         <span>On Time</span>
                       </div>
                     </th>
-                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center">Rejection</th>
-                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight">
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center cursor-help" title="Defect rate representing the percentage of units of this product rejected during delivery checks">Rejection</th>
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight cursor-help" title="Indicates if this vendor is the only onboarding supplier for this product (Single Vendor Dependency)">
                       <div className="flex flex-col items-center justify-center">
                         <span>Sole</span>
                         <span>Source</span>
                       </div>
                     </th>
-                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight">
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight cursor-help" title="FSN classification of inventory turnover speed: Fast, Slow, or Non-Moving">
                       <div className="flex flex-col items-center justify-center">
                         <span>FSN</span>
                         <span>Class</span>
                       </div>
                     </th>
-                    <th className="py-2.5 px-2 text-center leading-tight">
+                    <th className="py-2.5 px-2 text-center leading-tight cursor-help" title="Vendor performance score weighted specifically for this product based on its delivery metrics">
                       <div className="flex flex-col items-center justify-center">
                         <span>Overall</span>
                         <span>Score</span>
@@ -1084,19 +1104,19 @@ export default function VendorPerformance({
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 shadow-2xs">
                   <span className="text-[9.5px] font-extrabold text-slate-400 uppercase tracking-wider block">Current Stock</span>
-                  <span className="text-sm font-extrabold text-slate-900 mt-1.5 block">{totalCurrentStock.toLocaleString()} units</span>
+                  <span className="text-sm font-extrabold text-slate-900 mt-1.5 block">{totalCurrentStock.toLocaleString()} {activeProduct.uom}</span>
                 </div>
                 <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 shadow-2xs">
                   <span className="text-[9.5px] font-extrabold text-slate-400 uppercase tracking-wider block">Safety Stock</span>
-                  <span className="text-sm font-extrabold text-slate-900 mt-1.5 block">{totalSafetyStock.toLocaleString()} units</span>
+                  <span className="text-sm font-extrabold text-slate-900 mt-1.5 block">{totalSafetyStock.toLocaleString()} {activeProduct.uom}</span>
                 </div>
                 <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 shadow-2xs">
                   <span className="text-[9.5px] font-extrabold text-slate-400 uppercase tracking-wider block">Reorder Level (ROL)</span>
-                  <span className="text-sm font-extrabold text-slate-900 mt-1.5 block">{totalRol.toLocaleString()} units</span>
+                  <span className="text-sm font-extrabold text-slate-900 mt-1.5 block">{totalRol.toLocaleString()} {activeProduct.uom}</span>
                 </div>
                 <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 shadow-2xs">
                   <span className="text-[9.5px] font-extrabold text-slate-400 uppercase tracking-wider block">Recommended ROQ</span>
-                  <span className="text-sm font-extrabold text-slate-900 mt-1.5 block">{totalRoq.toLocaleString()} units</span>
+                  <span className="text-sm font-extrabold text-slate-900 mt-1.5 block">{totalRoq.toLocaleString()} {activeProduct.uom}</span>
                 </div>
                               <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150">
                 <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Active Vendors</span>
@@ -1182,41 +1202,44 @@ export default function VendorPerformance({
               <table className="w-full text-[11px] text-left">
                 <thead className="bg-slate-100 text-slate-700 font-extrabold tracking-wider uppercase border-b border-slate-200 text-[9.5px]">
                   <tr>
-                    <th className="py-2.5 px-3.5 border-r border-slate-200 text-left w-[220px] min-w-[220px]">Vendor</th>
-                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight">
+                    <th className="py-2.5 px-3.5 border-r border-slate-200 text-left w-[220px] min-w-[220px] cursor-help" title="Vendor Profile Name and Catalog ID">Vendor</th>
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight cursor-help" title="Classification of supplier (e.g. Manufacturer, Distributor, Wholesaler)">
                       <div className="flex flex-col items-center justify-center">
                         <span>Vendor</span>
                         <span>Type</span>
                       </div>
                     </th>
-                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center">Region</th>
-                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight">
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center cursor-help" title="Operational territory of the vendor profile">Region</th>
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight cursor-help" title="Contractual unit price for this product supplied by this vendor">
                       <div className="flex flex-col items-center justify-center">
                         <span>PO</span>
                         <span>Cost</span>
                       </div>
                     </th>
-                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight">
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight cursor-help" title="Avg. Actual Lead Time = Sum of actual transit lead times / Total delivered orders">
                       <div className="flex flex-col items-center justify-center">
                         <span>Lead</span>
                         <span>Time</span>
                       </div>
                     </th>
-                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight">
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight cursor-help" title="On-Time Delivery = (Delivered POs on or before Expected Date / Total Delivered POs) × 100">
                       <div className="flex flex-col items-center justify-center">
                         <span>On-</span>
                         <span>Time %</span>
                       </div>
                     </th>
-                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight">
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center leading-tight cursor-help" title="Defect rate representing the percentage of units rejected during delivery checks">
                       <div className="flex flex-col items-center justify-center">
                         <span>Rejection</span>
                         <span>%</span>
                       </div>
                     </th>
-                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center">MOQ</th>
+                    <th className="py-2.5 px-1.5 border-r border-slate-200 text-center cursor-help" title="Minimum Order Quantity required to place a procurement PO">MOQ</th>
   
-                    <th className="py-2.5 px-2 text-center leading-tight border-l border-slate-200 bg-emerald-50/30">
+                    <th 
+                      className="py-2.5 px-2 text-center leading-tight border-l border-slate-200 bg-emerald-50/30 cursor-help"
+                      title={`Organisation Weighted Score = Vendor Score × (Accepted Units / Delivered Units)\n\nWhere:\n• Vendor Score = 0.40(Fill Rate) + 0.25(On-Time Delivery) + 0.20(Order Accuracy) + 0.10(Stockout Score) + 0.05(Lead Time Score)\n• Accepted Units = Delivered Units - Rejected Units`}
+                    >
                       <div className="flex flex-col items-center justify-center">
                         <span>Organisation</span>
                         <span>Weighted Score</span>
