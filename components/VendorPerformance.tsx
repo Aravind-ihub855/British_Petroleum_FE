@@ -568,12 +568,11 @@ export default function VendorPerformance({
                         {/* <span className="text-[8px] text-slate-400 lowercase">(Weight 20%)</span> */}
                       </div>
                     </th>
-                    <th className="py-3 px-2 border-r border-slate-200 text-center leading-tight cursor-help" title="Supply Delays = Count of active purchase orders with status exactly equal to Delayed">
+                    {/* <th className="py-3 px-2 border-r border-slate-200 text-center leading-tight cursor-help" title="Supply Delays = Count of active purchase orders with status exactly equal to Delayed">
                       <div className="flex flex-col items-center justify-center">
                         <span>Supply Delays</span>
-                        {/* <span className="text-[8px] text-slate-400 lowercase">(Weight 10%)</span> */}
                       </div>
-                    </th>
+                    </th> */}
                     <th className="py-3 px-2 border-r border-slate-200 text-center leading-tight cursor-help" title="Avg. Actual Lead Time = Sum of actual transit lead times / Total delivered orders">
                       <div className="flex flex-col items-center justify-center">
                         <span>Avg. Actual Lead Time</span>
@@ -636,7 +635,7 @@ export default function VendorPerformance({
                           {/* Order Accuracy */}
                           <td className="py-2.5 px-2 text-center text-slate-600 font-medium border-r border-slate-100">{row.orderAccuracyVal.toFixed(1)}%</td>
                           {/* Stockouts */}
-                          <td className={`py-2.5 px-2 text-center text-slate-600 font-medium border-r border-slate-100`}>{row.stockouts} {row.stockouts === 1 ? "incident" : "incidents"}</td>
+                          {/* <td className={`py-2.5 px-2 text-center text-slate-600 font-medium border-r border-slate-100`}>{row.stockouts} {row.stockouts === 1 ? "incident" : "incidents"}</td> */}
                           {/* Lead Time */}
                           <td className="py-2.5 px-2 text-center text-slate-600 font-medium border-r border-slate-100">{row.leadTimeDays.toFixed(1)} days</td>
                           {/* Monthly PO Spend */}
