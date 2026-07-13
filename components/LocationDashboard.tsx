@@ -212,9 +212,9 @@ export default function LocationDashboard({ onNavigate }: LocationDashboardProps
                         {row.product}
                       </div>
                     </td>
-                    <td className="py-4 px-4 text-center text-slate-400 font-medium border-r border-slate-100">{row.uom}</td>
-                    <td className="py-4 px-4 text-right text-slate-600 font-normal border-r border-slate-100">{row.currentStock}</td>
-                    <td className="py-4 px-4 text-right font-bold text-slate-850 border-r border-slate-100">{row.roq}</td>
+                    <td className="py-4 px-4 text-center text-slate-900 font-semibold border-r border-slate-100">{row.uom}</td>
+                    <td className="py-4 px-4 text-right text-slate-900 font-semibold border-r border-slate-100">{row.currentStock}</td>
+                    <td className="py-4 px-4 text-right font-bold text-slate-900 border-r border-slate-100">{row.roq}</td>
                     <td className="py-4 px-6 text-center">
                       <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] border ${
                         row.storesAtRisk > 0 ? "text-rose-600 bg-rose-50 border-rose-100" : "text-slate-400 bg-slate-50 border-slate-150"

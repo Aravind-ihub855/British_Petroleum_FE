@@ -491,10 +491,10 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
                         {row.name}
                       </div>
                     </td>
-                    <td className="py-2.5 px-2 text-center text-slate-400 font-medium border-r border-slate-100">{row.uom}</td>
-                    <td className="py-2.5 px-2 text-center text-slate-700 font-normal border-r border-slate-100">{row.currentStock}</td>
-                    <td className="py-2.5 px-2 text-center text-slate-500 font-medium border-r border-slate-100">{row.safetyStockLevel}</td>
-                    <td className="py-2.5 px-2 text-center text-slate-500 font-medium border-r border-slate-100">{row.avgDailyConsumption}</td>
+                    <td className="py-2.5 px-2 text-center text-slate-900 font-semibold border-r border-slate-100">{row.uom}</td>
+                    <td className="py-2.5 px-2 text-center text-slate-900 font-semibold border-r border-slate-100">{row.currentStock}</td>
+                    <td className="py-2.5 px-2 text-center text-slate-900 font-semibold border-r border-slate-100">{row.safetyStockLevel}</td>
+                    <td className="py-2.5 px-2 text-center text-slate-900 font-semibold border-r border-slate-100">{row.avgDailyConsumption}</td>
                     <td className="py-2.5 px-2 text-center border-r border-slate-100">
                       <div className="font-bold text-slate-800 whitespace-nowrap">
                         {(() => {
@@ -512,8 +512,8 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
                         {daysLeft === 1 || daysLeft === 0 ? "day" : "days"} left
                       </div>
                     </td>
-                    <td className="py-2.5 px-2 text-center font-bold text-slate-800 border-r border-slate-100">{row.recommendedRoq}</td>
-                    <td className="py-2.5 px-2 text-center text-slate-500 font-medium border-r border-slate-100">
+                    <td className="py-2.5 px-2 text-center font-bold text-slate-900 border-r border-slate-100">{row.recommendedRoq}</td>
+                    <td className="py-2.5 px-2 text-center text-slate-900 font-semibold border-r border-slate-100">
                       {row.leadTimeDays} {row.leadTimeDays === 1 ? "day" : "days"}
                     </td>
                     <td className="py-2.5 px-2 text-center border-r border-slate-100">

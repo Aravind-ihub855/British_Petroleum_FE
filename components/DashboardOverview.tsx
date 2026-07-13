@@ -138,7 +138,9 @@ export default function DashboardOverview({ onNavigate }: DashboardOverviewProps
     overallHighRiskProductCount = Object.values(productAggregates).filter(p => p.riskLevel === "High").length;
   }
 
-  const formattedValuation = `$ ${(overallValuation / 1000000).toFixed(2)} M`;
+  const formattedValuation = isStoreManager
+    ? `$ ${(overallValuation / 10000).toFixed(0)}K`
+    : `$ ${(overallValuation / 1000000).toFixed(2)} M`;
   const formattedPrValue = `$ ${(pendingPrValue / 1000).toFixed(0)}K`;
   const inventoryHealthPct = totalSeededSKUsCount > 0 ? Math.round((healthyCount / totalSeededSKUsCount) * 100) : 0;
   const inventoryHealthLabel = inventoryHealthPct >= 70 ? "Good" : inventoryHealthPct >= 50 ? "Warning" : "Critical";
