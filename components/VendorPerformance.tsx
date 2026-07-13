@@ -868,13 +868,13 @@ export default function VendorPerformance({
                 <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Order Accuracy</span>
                 <span className="text-base font-extrabold text-slate-900 mt-1 block">{activeVendorOrderAccuracy.toFixed(1)}%</span>
               </div>
-              <div 
+              {/* <div 
                 className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150 cursor-help"
                 title="Supply Delay Incidents = Total count of active purchase orders currently marked as Delayed for this vendor"
               >
                 <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">Supply Delays</span>
                 <span className="text-base font-extrabold text-slate-900 mt-1 block">{activeVendorStockouts}</span>
-              </div>
+              </div> */}
               <div 
                 className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150 cursor-help"
                 title="Monthly PO Spend = Total value of POs approved or delivered in the active month"
