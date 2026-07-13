@@ -272,7 +272,7 @@ export default function VendorPerformance({
   const yoySign = yoyScoreChange > 0 ? "▲ +" : yoyScoreChange < 0 ? "▼ " : "";
 
   // Band calculations
-  const vendorBand = activeVendorPerfScore >= 95.0 ? "A" : activeVendorPerfScore >= 90.0 ? "B" : "C";
+  const vendorBand = activeVendorWeightedScore >= 95.0 ? "A" : activeVendorWeightedScore >= 90.0 ? "B" : "C";
 
   // Tab 3 Product-wise details
   const activeProduct = masterProducts.find((p) => p.code === selectedProductCode) || masterProducts[0];
@@ -743,10 +743,10 @@ export default function VendorPerformance({
                     <div className="relative w-16 h-16 flex items-center justify-center">
                       <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                         <circle cx="18" cy="18" r="15.915" fill="none" stroke="#f1f5f9" strokeWidth="4.5" />
-                        <circle cx="18" cy="18" r="15.915" fill="none" stroke="#008751" strokeWidth="4.5" strokeDasharray={`${activeVendorPerfScore} 100`} strokeLinecap="round" />
+                        <circle cx="18" cy="18" r="15.915" fill="none" stroke="#008751" strokeWidth="4.5" strokeDasharray={`${activeVendorWeightedScore} 100`} strokeLinecap="round" />
                       </svg>
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="absolute text-[11px] font-extrabold text-slate-800">{activeVendorPerfScore.toFixed(1)}</span>
+                        <span className="absolute text-[11px] font-extrabold text-slate-800">{activeVendorWeightedScore.toFixed(1)}</span>
                       </div>
                     </div>
                     <div className="text-center space-y-0.5">
@@ -1114,8 +1114,8 @@ export default function VendorPerformance({
                   <span className="text-[9.5px] font-extrabold text-slate-400 uppercase tracking-wider block">Reorder Level (ROL)</span>
                   <span className="text-sm font-extrabold text-slate-900 mt-1.5 block">{totalRol.toLocaleString()} {activeProduct.uom}</span>
                 </div>
-                <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 shadow-2xs">
-                  <span className="text-[9.5px] font-extrabold text-slate-400 uppercase tracking-wider block">Recommended ROQ</span>
+                <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 shadow-2xs cursor-help" title="Reorder Quantity (ROQ) calculated for the next replenishment cycle independently of the current stock snapshot.">
+                  <span className="text-[9.5px] font-extrabold text-slate-400 uppercase tracking-wider block">Planning ROQ</span>
                   <span className="text-sm font-extrabold text-slate-900 mt-1.5 block">{totalRoq.toLocaleString()} {activeProduct.uom}</span>
                 </div>
                               <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-2xs hover:scale-[1.02] transition duration-150">

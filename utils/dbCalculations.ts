@@ -339,9 +339,11 @@ export function getDynamicInventoryDates(item: any, todayDate: Date): DynamicDat
   let prMrStatus = "Monitor";
   const derivedRol = Math.ceil(avgCons * leadTime) + item.safetyStockLevel;
   if (currentStock <= derivedRol) {
-    prMrStatus = "PR";
-  } else if (currentStock <= (derivedRol + avgCons * 3)) {
-    prMrStatus = "MR";
+    if (daysToStockout >= leadTime) {
+      prMrStatus = "PR";
+    } else {
+      prMrStatus = "MR";
+    }
   }
 
   return {

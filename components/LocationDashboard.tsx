@@ -197,7 +197,7 @@ export default function LocationDashboard({ onNavigate }: LocationDashboardProps
                   <th className="py-3.5 px-6 cursor-help" title="Product name and catalog descriptor">Product Name</th>
                   <th className="py-3.5 px-4 text-center cursor-help" title="Unit of Measure">UOM</th>
                   <th className="py-3.5 px-4 text-right cursor-help" title="Total stock units combined across all stores in this city">Current Stock</th>
-                  <th className="py-3.5 px-4 text-right cursor-help" title="Recommended reorder quantity needed for this product">ROQ</th>
+                  <th className="py-3.5 px-4 text-right cursor-help" title="Planning Reorder Quantity (ROQ) calculated for the next replenishment cycle independently of the current stock snapshot.">ROQ</th>
                   <th className="py-3.5 px-6 text-center cursor-help" title="Number of unique stores in this city where this product is currently below ROL">Stores Risk</th>
                 </tr>
               </thead>

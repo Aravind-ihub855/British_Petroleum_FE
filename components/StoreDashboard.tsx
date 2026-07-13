@@ -419,7 +419,7 @@ export default function StoreDashboard({ onNavigate }: StoreDashboardProps) {
                     {renderSortIcon("daysLeft")}
                   </div>
                 </th>
-                <th onClick={() => handleSort("recommendedRoq")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-help hover:bg-slate-200/50 transition select-none text-center relative" title="Recommended Reorder Quantity (ROQ) needed to return stock to maximum safety capacity level">
+                <th onClick={() => handleSort("recommendedRoq")} className="py-2.5 px-2 pr-3.5 border-r border-slate-200 cursor-help hover:bg-slate-200/50 transition select-none text-center relative" title="Planning Reorder Quantity (ROQ) calculated for the next replenishment cycle independently of the current stock snapshot.">
                   <div className="flex items-center justify-center">
                     <span>ROQ</span>
                   </div>

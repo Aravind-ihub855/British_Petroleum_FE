@@ -247,8 +247,8 @@ export default function VendorDashboardOverview({ onNavigate }: VendorDashboardO
   // 4. PURCHASE ORDER STATUS (Donut Chart)
   const poStatusesCount = [
     { label: "Pending Approval", count: purchaseOrders.filter(po => po.status === "Pending Approval" || po.status === "Pending Review").length, color: "#a855f7" },
-    { label: "Approved", count: purchaseOrders.filter(po => po.status === "Approved" && po.expectedDeliveryDate >= todayStr).length, color: "#3b82f6" },
-    { label: "In Transit", count: purchaseOrders.filter(po => po.status === "In Transit" && po.expectedDeliveryDate >= todayStr).length, color: "#f59e0b" },
+    { label: "Approved", count: purchaseOrders.filter(po => po.status === "Approved").length, color: "#3b82f6" },
+    { label: "In Transit", count: purchaseOrders.filter(po => po.status === "In Transit").length, color: "#f59e0b" },
     { label: "Delivered", count: purchaseOrders.filter(po => po.status === "Delivered").length, color: "#10b981" },
     { label: "Delayed", count: purchaseOrders.filter(po => po.status === "Delayed").length, color: "#ef4444" }
   ];

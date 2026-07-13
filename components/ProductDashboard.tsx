@@ -211,7 +211,7 @@ export default function ProductDashboard({ onNavigate }: ProductDashboardProps) 
                     <span>Left</span>
                   </div>
                 </th>
-                <th className="py-2.5 px-2 border-r border-slate-200 text-center">ROQ</th>
+                <th className="py-2.5 px-2 border-r border-slate-200 text-center cursor-help" title="Planning Reorder Quantity (ROQ) calculated for the next replenishment cycle independently of the current stock snapshot.">ROQ</th>
                 <th className="py-2.5 px-2 border-r border-slate-200 text-center leading-tight">
                   <div className="flex flex-col items-center justify-center">
                     <span>Order By</span>
