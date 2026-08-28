@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useAuth } from "../context/AuthContext";
+import React, { useState, useEffect, useRef } from "react";
+import { useAuth, AvailableRole } from "../context/AuthContext";
 import Sidebar, { sidebarItems, getRoleAllowedTabs } from "@/components/Sidebar";
 import DashboardOverview from "@/components/DashboardOverview";
 import VendorDashboardOverview from "@/components/VendorDashboardOverview";
@@ -63,10 +63,12 @@ const getTabMetadata = (tab: string) => {
 };
 
 export default function Home() {
-  const { user, logout, loading } = useAuth();
+  const { user, logout, loading, switchRole } = useAuth();
   const [activeTab, setActiveTab] = useState<string>("");
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [subTab, setSubTab] = useState<string>("store"); // store | location | product
+  const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState<boolean>(false);
+  const roleDropdownRef = useRef<HTMLDivElement>(null);
 
   // Global cross-navigation routing state for Vendor Performance deep dives
   const [vendorSubTab, setVendorSubTab] = useState<string>("overview"); // overview | vendor_wise | product_wise
@@ -76,11 +78,22 @@ export default function Home() {
   // KPI detail drill-down state (hidden page, not in sidebar)
   const [kpiDetail, setKpiDetail] = useState<string | null>(null);
 
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (roleDropdownRef.current && !roleDropdownRef.current.contains(event.target as Node)) {
+        setIsRoleDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   // Initialize active tab based on user role when loaded
   useEffect(() => {
     if (user && !activeTab) {
       const allowed = getRoleAllowedTabs(user.role);
-      setActiveTab(allowed[0] || "2");
+      setActiveTab(allowed[0] || "1");
     }
   }, [user, activeTab]);
 
@@ -89,10 +102,19 @@ export default function Home() {
     if (user && activeTab) {
       const allowed = getRoleAllowedTabs(user.role);
       if (!allowed.includes(activeTab)) {
-        setActiveTab(allowed[0] || "2");
+        setActiveTab(allowed[0] || "1");
       }
     }
   }, [user, activeTab]);
+
+  const handleRoleSelect = async (role: AvailableRole) => {
+    setIsRoleDropdownOpen(false);
+    if (user?.role === role) return;
+    setKpiDetail(null);
+    setSelectedProductCode("");
+    setSelectedVendorName("");
+    await switchRole(role);
+  };
 
   const handleCrossNavigate = (
     tabId: string,
@@ -134,14 +156,14 @@ export default function Home() {
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
-          <span className="text-slate-500 text-sm font-semibold">Verifying Secure Session...</span>
+          <span className="text-slate-500 text-sm font-semibold">Loading Dashboard...</span>
         </div>
       </div>
     );
   }
 
   if (!user) {
-    return null; // Redirected by AuthContext
+    return null;
   }
 
   // Find active tab name & icon
@@ -180,9 +202,9 @@ export default function Home() {
       {/* Main content right panel */}
       <div className="flex-grow flex flex-col overflow-y-auto max-h-screen">
         
-        {/* Top Header: Title & Description without Breadcrumbs or Export button */}
-        <header className="bg-white border-b border-slate-100 py-6 px-6 lg:px-8 sticky top-0 z-30 shadow-xs flex-shrink-0">
-          <div className="flex items-center justify-between">
+        {/* Top Header: Title, Description & Role Switcher */}
+        <header className="bg-white border-b border-slate-100 py-4 px-6 lg:px-8 sticky top-0 z-30 shadow-xs flex-shrink-0">
+          <div className="flex items-center justify-between gap-4">
             <div className="flex flex-col text-left">
               <h1 className="text-xl lg:text-2xl font-bold text-slate-900 tracking-tight leading-none flex items-center gap-2">
                 {/* Mobile hamburger menu toggle */}
@@ -201,17 +223,98 @@ export default function Home() {
               </p>
             </div>
 
-            {selectedProductCode && (
-              <button
-                onClick={() => setSelectedProductCode("")}
-                className="border border-emerald-500/20 text-bp-green hover:bg-slate-50 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition duration-150 flex-shrink-0"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                Back to List
-              </button>
-            )}
+            <div className="flex items-center gap-3">
+              {selectedProductCode && (
+                <button
+                  onClick={() => setSelectedProductCode("")}
+                  className="border border-emerald-500/20 text-bp-green hover:bg-slate-50 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition duration-150 flex-shrink-0"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                  Back to List
+                </button>
+              )}
+
+              {/* Role Switcher Dropdown */}
+              <div className="relative" ref={roleDropdownRef}>
+                <button
+                  onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
+                  className="flex items-center gap-3 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 px-3.5 py-2 rounded-xl transition duration-150 shadow-2xs group cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2.5 h-2.5 rounded-full ${user.role === "vendor manager" ? "bg-amber-500 ring-4 ring-amber-100" : "bg-emerald-500 ring-4 ring-emerald-100"}`} />
+                    <div className="flex flex-col text-left">
+                      <span className="text-[9px] uppercase font-extrabold tracking-wider text-slate-400 leading-none">Role Switcher</span>
+                      <span className="text-xs font-bold text-slate-800 capitalize leading-tight mt-0.5">
+                        {user.role === "vendor manager" ? "Vendor Manager" : "Store Manager"}
+                      </span>
+                    </div>
+                  </div>
+                  <svg
+                    className={`w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-transform duration-200 ${isRoleDropdownOpen ? "rotate-180" : ""}`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {/* Dropdown Menu Popover */}
+                {isRoleDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <div className="px-4 py-2 border-b border-slate-100">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Switch Persona</p>
+                    </div>
+
+                    {/* Option 1: Store Manager */}
+                    <button
+                      onClick={() => handleRoleSelect("store manager")}
+                      className={`w-full px-4 py-3 text-left flex items-start gap-3 hover:bg-emerald-50/50 transition duration-150 cursor-pointer ${
+                        user.role === "store manager" ? "bg-emerald-50/80 font-bold" : ""
+                      }`}
+                    >
+                      <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">
+                        SM
+                      </div>
+                      <div className="flex-grow min-w-0">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-900">Store Manager</span>
+                          {user.role === "store manager" && (
+                            <span className="text-[9px] font-bold bg-emerald-600 text-white px-2 py-0.5 rounded-full">Active</span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-500 truncate">storemanager@gmail.com</p>
+                        <p className="text-[10px] text-emerald-700 font-semibold mt-0.5">BP (Lincoln Park Connect) • Chicago</p>
+                      </div>
+                    </button>
+
+                    {/* Option 2: Vendor Manager */}
+                    <button
+                      onClick={() => handleRoleSelect("vendor manager")}
+                      className={`w-full px-4 py-3 text-left flex items-start gap-3 hover:bg-amber-50/50 transition duration-150 cursor-pointer ${
+                        user.role === "vendor manager" ? "bg-amber-50/80 font-bold" : ""
+                      }`}
+                    >
+                      <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">
+                        VM
+                      </div>
+                      <div className="flex-grow min-w-0">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-900">Vendor Manager</span>
+                          {user.role === "vendor manager" && (
+                            <span className="text-[9px] font-bold bg-amber-600 text-white px-2 py-0.5 rounded-full">Active</span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-500 truncate">vendormanager@gmail.com</p>
+                        <p className="text-[10px] text-amber-700 font-semibold mt-0.5">North Region Scope (Chicago, Denver)</p>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </header>
 

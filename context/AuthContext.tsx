@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 
-interface User {
+export interface User {
   id: string;
   name: string;
   email: string;
@@ -13,6 +13,23 @@ interface User {
   created_at: string;
 }
 
+export const DEFAULT_CREDENTIALS = {
+  "store manager": {
+    email: "storemanager@gmail.com",
+    password: "Storemanager@1234",
+    label: "Store Manager",
+    badge: "BP Lincoln Park",
+  },
+  "vendor manager": {
+    email: "vendormanager@gmail.com",
+    password: "Vendormanager@1234",
+    label: "Vendor Manager",
+    badge: "North Region",
+  },
+} as const;
+
+export type AvailableRole = keyof typeof DEFAULT_CREDENTIALS;
+
 interface AuthContextType {
   user: User | null;
   token: string | null;
@@ -20,11 +37,10 @@ interface AuthContextType {
   login: (token: string) => Promise<void>;
   logout: () => void;
   checkAuth: () => Promise<void>;
+  switchRole: (role: AvailableRole) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-const PUBLIC_ROUTES = ["/signin", "/signup"];
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -35,57 +51,80 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-  // Check authentication on initial load
-  const checkAuth = async () => {
-    const storedToken = localStorage.getItem("token");
-    if (!storedToken) {
-      setUser(null);
-      setToken(null);
-      setLoading(false);
-      return;
-    }
-
+  // Login helper with credentials
+  const loginWithCredentials = async (email: string, pass: string) => {
     try {
-      const res = await fetch(`${API_URL}/api/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${storedToken}`,
-        },
+      const signinRes = await fetch(`${API_URL}/api/auth/signin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password: pass }),
       });
 
-      if (res.ok) {
-        const userData = await res.json();
-        setUser(userData);
-        setToken(storedToken);
-      } else {
-        // Token is invalid/expired
-        localStorage.removeItem("token");
-        setUser(null);
-        setToken(null);
+      if (signinRes.ok) {
+        const signinData = await signinRes.json();
+        const newToken = signinData.access_token;
+        localStorage.setItem("token", newToken);
+        setToken(newToken);
+
+        const meRes = await fetch(`${API_URL}/api/auth/me`, {
+          headers: { Authorization: `Bearer ${newToken}` },
+        });
+
+        if (meRes.ok) {
+          const userData = await meRes.json();
+          setUser(userData);
+          return true;
+        }
       }
     } catch (err) {
-      console.error("Auth check error:", err);
-      // Don't clear token on network error to allow retries, but don't log in
-    } finally {
-      setLoading(false);
+      console.error("Auto login error:", err);
     }
+    return false;
+  };
+
+  // Check authentication on initial load or auto-login with default persona
+  const checkAuth = async () => {
+    const storedToken = localStorage.getItem("token");
+    if (storedToken) {
+      try {
+        const res = await fetch(`${API_URL}/api/auth/me`, {
+          headers: {
+            Authorization: `Bearer ${storedToken}`,
+          },
+        });
+
+        if (res.ok) {
+          const userData = await res.json();
+          setUser(userData);
+          setToken(storedToken);
+          setLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.error("Auth check error, attempting default auto-login:", err);
+      }
+    }
+
+    // Auto-login as default Store Manager
+    await loginWithCredentials(
+      DEFAULT_CREDENTIALS["store manager"].email,
+      DEFAULT_CREDENTIALS["store manager"].password
+    );
+    setLoading(false);
   };
 
   useEffect(() => {
     checkAuth();
   }, []);
 
-  // Handle route guarding based on auth state
-  useEffect(() => {
-    if (loading) return;
-
-    const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
-
-    if (!token && !isPublicRoute) {
-      router.push("/signin");
-    } else if (token && isPublicRoute) {
-      router.push("/");
+  const switchRole = async (targetRole: AvailableRole) => {
+    setLoading(true);
+    const creds = DEFAULT_CREDENTIALS[targetRole];
+    if (creds) {
+      await loginWithCredentials(creds.email, creds.password);
     }
-  }, [token, pathname, loading, router]);
+    setLoading(false);
+  };
 
   const login = async (newToken: string) => {
     localStorage.setItem("token", newToken);
@@ -102,27 +141,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (res.ok) {
         const userData = await res.json();
         setUser(userData);
-        router.push("/");
-      } else {
-        logout();
       }
     } catch (err) {
       console.error("Login profile fetch error:", err);
-      logout();
     } finally {
       setLoading(false);
     }
   };
 
   const logout = () => {
-    localStorage.removeItem("token");
-    setUser(null);
-    setToken(null);
-    router.push("/signin");
+    // Reset to default Store Manager instead of kicking out to signin
+    switchRole("store manager");
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, checkAuth }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout, checkAuth, switchRole }}>
       {children}
     </AuthContext.Provider>
   );
@@ -135,3 +168,4 @@ export function useAuth() {
   }
   return context;
 }
+
